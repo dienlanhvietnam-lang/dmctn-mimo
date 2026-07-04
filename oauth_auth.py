@@ -7,7 +7,7 @@ import sys
 import json
 from DrissionPage import ChromiumPage, ChromiumOptions
 from cursor_auth import CursorAuth
-from utils import get_random_wait_time, get_default_chrome_path
+from utils import get_random_wait_time, get_default_chrome_path, should_keep_cursor_running
 from config import get_config
 import platform
 
@@ -120,14 +120,15 @@ class OAuthHandler:
             print(f"{Fore.CYAN}{EMOJI['INFO']} {self.translator.get('oauth.found_browser_data_directory', path=user_data_dir) if self.translator else f'Found browser data directory: {user_data_dir}'}{Style.RESET_ALL}")
             
             # Show warning about closing Chrome first
-            print(f"\n{Fore.YELLOW}{EMOJI['WARNING']} {self.translator.get('chrome_profile.warning_chrome_close') if self.translator else 'Warning: This will close all running Chrome processes'}{Style.RESET_ALL}")
-            choice = input(f"{Fore.YELLOW} {self.translator.get('menu.continue_prompt', choices='y/N')} {Style.RESET_ALL}").lower()
-            if choice != 'y':
-                print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('menu.operation_cancelled_by_user') if self.translator else 'Operation cancelled by user'}{Style.RESET_ALL}")
-                return False
-
-            # Kill existing browser processes
-            self._kill_browser_processes()
+            if should_keep_cursor_running():
+                print(f"{Fore.CYAN}{EMOJI['INFO']} {self.translator.get('oauth.keep_chrome_running') if self.translator else 'Giữ Chrome/Cursor đang chạy, bỏ qua bước đóng trình duyệt.'}{Style.RESET_ALL}")
+            else:
+                print(f"\n{Fore.YELLOW}{EMOJI['WARNING']} {self.translator.get('chrome_profile.warning_chrome_close') if self.translator else 'Warning: This will close all running Chrome processes'}{Style.RESET_ALL}")
+                choice = input(f"{Fore.YELLOW} {self.translator.get('menu.continue_prompt', choices='y/N')} {Style.RESET_ALL}").lower()
+                if choice != 'y':
+                    print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('menu.operation_cancelled_by_user') if self.translator else 'Operation cancelled by user'}{Style.RESET_ALL}")
+                    return False
+                self._kill_browser_processes()
             
             # Let user select a profile
             if not self._select_profile():
@@ -854,6 +855,11 @@ def main(auth_type, translator=None):
             refresh_token=auth_info["token"]
         ):
             print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {translator.get('oauth.auth_update_success') if translator else 'Auth update success'}{Style.RESET_ALL}")
+            try:
+                from vip_activate import patch_workbench_vip
+                patch_workbench_vip(translator)
+            except Exception as e:
+                print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('vip.patch_skipped', error=str(e)) if translator else f'VIP UI patch skipped: {e}'}{Style.RESET_ALL}")
             # Close the browser after successful authentication
             if handler.browser:
                 handler.browser.quit()

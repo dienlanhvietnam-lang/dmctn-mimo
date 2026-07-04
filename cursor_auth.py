@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import sys
+import json
 from colorama import Fore, Style, init
 from config import get_config
 
@@ -99,15 +100,9 @@ class CursorAuth:
                 conn.close()
 
             # Reconnect to the database
-            conn = sqlite3.connect(self.db_path)
-            print(f"{EMOJI['INFO']} {Fore.GREEN} {self.translator.get('auth.connected_to_database')}{Style.RESET_ALL}")
-            cursor = conn.cursor()
-            
-            # Add timeout and other optimization settings
-            conn.execute("PRAGMA busy_timeout = 5000")
-            conn.execute("PRAGMA journal_mode = WAL")
-            conn.execute("PRAGMA synchronous = NORMAL")
-            
+            if not os.path.exists(self.db_path):
+                return False
+
             # Set the key-value pairs to update
             updates = []
 
@@ -119,33 +114,16 @@ class CursorAuth:
                 updates.append(("cursorAuth/accessToken", access_token))
             if refresh_token is not None:
                 updates.append(("cursorAuth/refreshToken", refresh_token))
-                
 
-            # Use transactions to ensure data integrity
-            cursor.execute("BEGIN TRANSACTION")
-            try:
-                for key, value in updates:
-                    # Check if the key exists
-                    cursor.execute("SELECT COUNT(*) FROM ItemTable WHERE key = ?", (key,))
-                    if cursor.fetchone()[0] == 0:
-                        cursor.execute("""
-                            INSERT INTO ItemTable (key, value) 
-                            VALUES (?, ?)
-                        """, (key, value))
-                    else:
-                        cursor.execute("""
-                            UPDATE ItemTable SET value = ?
-                            WHERE key = ?
-                        """, (value, key))
-                    print(f"{EMOJI['INFO']} {Fore.CYAN} {self.translator.get('auth.updating_pair')} {key.split('/')[-1]}...{Style.RESET_ALL}")
-                
-                cursor.execute("COMMIT")
-                print(f"{EMOJI['SUCCESS']} {Fore.GREEN}{self.translator.get('auth.database_updated_successfully')}{Style.RESET_ALL}")
-                return True
-                
-            except Exception as e:
-                cursor.execute("ROLLBACK")
-                raise e
+            updates.extend([
+                ("cursorAuth/stripeMembershipType", "pro"),
+                ("cursorAuth/stripeSubscriptionStatus", "active"),
+            ])
+
+            success = self._write_updates(updates)
+            if success:
+                self._sync_storage_json(updates)
+            return success
 
         except sqlite3.Error as e:
             print(f"\n{EMOJI['ERROR']} {Fore.RED} {self.translator.get('auth.database_error', error=str(e))}{Style.RESET_ALL}")
@@ -156,4 +134,49 @@ class CursorAuth:
         finally:
             if conn:
                 conn.close()
-                print(f"{EMOJI['DB']} {Fore.CYAN} {self.translator.get('auth.database_connection_closed')}{Style.RESET_ALL}")
+
+    def _write_updates(self, updates):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.cursor()
+            conn.execute("PRAGMA busy_timeout = 5000")
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA synchronous = NORMAL")
+            cursor.execute("BEGIN TRANSACTION")
+            for key, value in updates:
+                cursor.execute("SELECT COUNT(*) FROM ItemTable WHERE key = ?", (key,))
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute("INSERT INTO ItemTable (key, value) VALUES (?, ?)", (key, value))
+                else:
+                    cursor.execute("UPDATE ItemTable SET value = ? WHERE key = ?", (value, key))
+                print(f"{EMOJI['INFO']} {Fore.CYAN} {self.translator.get('auth.updating_pair')} {key.split('/')[-1]}...{Style.RESET_ALL}")
+            cursor.execute("COMMIT")
+            print(f"{EMOJI['SUCCESS']} {Fore.GREEN}{self.translator.get('auth.database_updated_successfully')}{Style.RESET_ALL}")
+            return True
+        except Exception as e:
+            cursor.execute("ROLLBACK")
+            raise e
+        finally:
+            conn.close()
+
+    def _sync_storage_json(self, updates):
+        config = get_config(self.translator)
+        if not config:
+            return
+        if sys.platform == "win32":
+            storage_path = config.get('WindowsPaths', 'storage_path')
+        elif sys.platform == "darwin":
+            storage_path = config.get('MacPaths', 'storage_path')
+        else:
+            storage_path = config.get('LinuxPaths', 'storage_path')
+        if not storage_path or not os.path.exists(os.path.dirname(storage_path)):
+            return
+        data = {}
+        if os.path.exists(storage_path):
+            with open(storage_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        for key, value in updates:
+            data[key] = value
+        with open(storage_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
+        print(f"{EMOJI['SUCCESS']} {Fore.GREEN}{self.translator.get('auth.storage_synced') if self.translator else 'storage.json synced'}{Style.RESET_ALL}")

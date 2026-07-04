@@ -20,7 +20,8 @@
         "totally_reset": "Đặt lại hoàn toàn Cursor",
         "outdate": "Quá cũ",
         "temp_github_register": "Đăng ký GitHub tạm thời",
-        "coming_soon": "Sắp ra mắt"
+        "bypass_token_limit": "Bypass Token Limit",
+        "activate_vip": "Kích Hoạt Tài Khoản VIP"
     },
     "languages": {
         "en": "Tiếng Anh",
@@ -197,7 +198,8 @@
         "updating_pair": "Đang Cập Nhật Cặp Khóa-Giá Trị",
         "db_not_found": "Không tìm thấy tệp cơ sở dữ liệu tại: {path}",
         "db_permission_error": "Không thể truy cập tệp cơ sở dữ liệu. Vui lòng kiểm tra quyền",
-        "db_connection_error": "Không thể kết nối đến cơ sở dữ liệu: {error}"
+        "db_connection_error": "Không thể kết nối đến cơ sở dữ liệu: {error}",
+        "storage_synced": "Đã đồng bộ storage.json"
     },
     "control": {
         "generate_email": "Đang Tạo Email Mới",
@@ -279,7 +281,8 @@
         "removing_directory": "Đang Xóa Thư Mục",
         "directory_removed": "Đã Xóa Thư Mục",
         "creating_block_file": "Đang Tạo Tệp Chặn",
-        "block_file_created": "Đã Tạo Tệp Chặn"
+        "block_file_created": "Đã Tạo Tệp Chặn",
+        "keep_cursor_running": "Giữ Cursor đang chạy, bỏ qua bước tắt process."
     },
     "updater": {
         "checking": "Đang Kiểm Tra Cập Nhật...",
@@ -293,6 +296,20 @@
         "invalid_choice": "Lựa Chọn Không Hợp Lệ. Vui Lòng Nhập 'Y' Hoặc 'n'.",
         "development_version": "Phiên Bản Phát Triển {current} > {latest}",
         "changelog_title": "Nhật ký thay đổi"
+    },
+    "vip": {
+        "title": "Kích Hoạt Tài Khoản VIP",
+        "membership_activated": "Đã kích hoạt VIP/Pro cục bộ",
+        "workbench_patched": "Đã patch giao diện VIP",
+        "no_ui_changes": "Pattern VIP đã được áp dụng hoặc không tìm thấy trong phiên bản Cursor này",
+        "file_locked": "File đang bị khóa vì Cursor đang chạy. Khởi động lại Cursor sau khi patch.",
+        "patch_skipped": "Bỏ qua patch VIP UI: {error}",
+        "patches_applied": "Đã áp dụng {count} patch chống revert Free Plan",
+        "reload_hint": "Bắt buộc reload Cursor: Ctrl+Shift+P → Developer: Reload Window (patch chỉ có hiệu lực sau reload)",
+        "sync_blocked": "Đã chặn đồng bộ membership/token định kỳ lên server"
+    },
+    "oauth": {
+        "keep_chrome_running": "Giữ Chrome/Cursor đang chạy, bỏ qua bước đóng trình duyệt."
     },
     "totally_reset": {
         "title": "Đặt lại hoàn toàn Cursor",

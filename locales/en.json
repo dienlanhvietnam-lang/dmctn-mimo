@@ -32,7 +32,8 @@
         "exiting": "Exiting ……",
         "bypass_version_check": "Bypass Cursor Version Check",
         "check_user_authorized": "Check User Authorized",
-        "bypass_token_limit": "Bypass Token Limit"
+        "bypass_token_limit": "Bypass Token Limit",
+        "activate_vip": "Activate VIP Account"
     },
     "languages": {
         "en": "English",
@@ -220,7 +221,8 @@
         "updating_pair": "Updating Key-Value Pair",
         "db_not_found": "Database file not found at: {path}",
         "db_permission_error": "Cannot access database file. Please check permissions",
-        "db_connection_error": "Failed to connect to database: {error}"
+        "db_connection_error": "Failed to connect to database: {error}",
+        "storage_synced": "storage.json synced"
     },
     "control": {
         "generate_email": "Generating New Email",
@@ -324,7 +326,8 @@
         "block_file_locked_error": "Block file locked error: {error}",
         "yml_locked_error": "update.yml file locked error: {error}",
         "block_file_already_locked_error": "Block file already locked error: {error}",
-        "yml_already_locked_error": "update.yml file already locked error: {error}"
+        "yml_already_locked_error": "update.yml file already locked error: {error}",
+        "keep_cursor_running": "Keeping Cursor running, skipping process termination."
     },
     "updater": {
         "checking": "Checking for updates...",
@@ -733,5 +736,16 @@
         "title": "Bypass Token Limit Tool",
         "description": "This tool modifies the workbench.desktop.main.js file to bypass the token limit",
         "press_enter": "Press Enter to continue..."
+    },
+    "vip": {
+        "title": "Activate VIP Account",
+        "membership_activated": "VIP/Pro membership activated locally",
+        "workbench_patched": "VIP UI patched",
+        "no_ui_changes": "VIP UI patterns already applied or not found for this Cursor version",
+        "file_locked": "File is locked while Cursor is running. Restart Cursor after patching.",
+        "patch_skipped": "Skipped VIP UI patch: {error}",
+        "patches_applied": "Applied {count} anti-revert membership patches",
+        "reload_hint": "Reload Cursor required: Ctrl+Shift+P -> Developer: Reload Window (patches apply after reload)",
+        "sync_blocked": "Blocked periodic membership/token sync to server"
     }
 }   

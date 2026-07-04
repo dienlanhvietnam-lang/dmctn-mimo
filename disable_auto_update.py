@@ -7,6 +7,12 @@ import subprocess
 from config import get_config
 import re
 import tempfile
+from utils import (
+    get_resolved_cursor_app_path,
+    get_cursor_product_json_path,
+    get_cursor_paths_section,
+    should_keep_cursor_running,
+)
 
 # Initialize colorama
 init()
@@ -31,18 +37,34 @@ class AutoUpdateDisabler:
         # Get path from configuration file
         config = get_config(translator)
         if config:
+            section = get_cursor_paths_section()
+            configured_app = config.get(section, 'cursor_path', fallback='') if config.has_section(section) else ''
+            app_path = get_resolved_cursor_app_path(configured_app)
+            if app_path:
+                self.product_json_path = os.path.join(app_path, 'product.json')
+                resources_dir = os.path.dirname(app_path)
+                for name in ('app-update.yml', 'update.yml'):
+                    update_yml = os.path.join(resources_dir, name)
+                    if os.path.exists(update_yml) or name == 'app-update.yml':
+                        self.update_yml_path = update_yml
+                        break
             if self.system == "Windows":
                 self.updater_path = config.get('WindowsPaths', 'updater_path', fallback=os.path.join(os.getenv("LOCALAPPDATA", ""), "cursor-updater"))
-                self.update_yml_path = config.get('WindowsPaths', 'update_yml_path', fallback=os.path.join(os.getenv("LOCALAPPDATA", ""), "Programs", "Cursor", "resources", "app", "update.yml"))
-                self.product_json_path = config.get('WindowsPaths', 'product_json_path', fallback=os.path.join(os.getenv("LOCALAPPDATA", ""), "Programs", "Cursor", "resources", "app", "product.json"))
             elif self.system == "Darwin":
                 self.updater_path = config.get('MacPaths', 'updater_path', fallback=os.path.expanduser("~/Library/Application Support/cursor-updater"))
-                self.update_yml_path = config.get('MacPaths', 'update_yml_path', fallback="/Applications/Cursor.app/Contents/Resources/app-update.yml")
-                self.product_json_path = config.get('MacPaths', 'product_json_path', fallback="/Applications/Cursor.app/Contents/Resources/app/product.json")
             elif self.system == "Linux":
                 self.updater_path = config.get('LinuxPaths', 'updater_path', fallback=os.path.expanduser("~/.config/cursor-updater"))
-                self.update_yml_path = config.get('LinuxPaths', 'update_yml_path', fallback=os.path.expanduser("~/.config/cursor/resources/app-update.yml"))
-                self.product_json_path = config.get('LinuxPaths', 'product_json_path', fallback=os.path.expanduser("~/.config/cursor/resources/app/product.json"))
+
+            if not app_path:
+                if self.system == "Windows":
+                    self.update_yml_path = config.get('WindowsPaths', 'update_yml_path', fallback=os.path.join(os.getenv("LOCALAPPDATA", ""), "Programs", "Cursor", "resources", "app-update.yml"))
+                    self.product_json_path = config.get('WindowsPaths', 'product_json_path', fallback=os.path.join(os.getenv("LOCALAPPDATA", ""), "Programs", "Cursor", "resources", "app", "product.json"))
+                elif self.system == "Darwin":
+                    self.update_yml_path = config.get('MacPaths', 'update_yml_path', fallback="/Applications/Cursor.app/Contents/Resources/app-update.yml")
+                    self.product_json_path = config.get('MacPaths', 'product_json_path', fallback="/Applications/Cursor.app/Contents/Resources/app/product.json")
+                elif self.system == "Linux":
+                    self.update_yml_path = config.get('LinuxPaths', 'update_yml_path', fallback=os.path.expanduser("~/.config/cursor/resources/app-update.yml"))
+                    self.product_json_path = config.get('LinuxPaths', 'product_json_path', fallback=os.path.expanduser("~/.config/cursor/resources/app/product.json"))
         else:
             # If configuration loading fails, use default paths
             self.updater_paths = {
@@ -107,7 +129,10 @@ class AutoUpdateDisabler:
             return False
 
     def _kill_cursor_processes(self):
-        """End all Cursor processes"""
+        """End all Cursor processes unless keep-running mode is enabled."""
+        if should_keep_cursor_running():
+            print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('update.keep_cursor_running') if self.translator else 'Giữ Cursor đang chạy, bỏ qua bước tắt process.'}{Style.RESET_ALL}")
+            return True
         try:
             print(f"{Fore.CYAN}{EMOJI['PROCESS']} {self.translator.get('update.killing_processes') if self.translator else '正在结束 Cursor 进程...'}{Style.RESET_ALL}")
             

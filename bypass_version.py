@@ -7,7 +7,7 @@ import time
 from colorama import Fore, Style, init
 import sys
 import traceback
-from utils import get_user_documents_path
+from utils import get_user_documents_path, get_cursor_product_json_path, get_resolved_cursor_app_path
 
 # Initialize colorama
 init()
@@ -26,57 +26,10 @@ EMOJI = {
 
 def get_product_json_path(translator=None):
     """Get Cursor product.json path"""
-    system = platform.system()
-    
-    # Read configuration
-    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
-    config_file = os.path.join(config_dir, "config.ini")
-    config = configparser.ConfigParser()
-    
-    if os.path.exists(config_file):
-        config.read(config_file)
-    
-    if system == "Windows":
-        localappdata = os.environ.get("LOCALAPPDATA")
-        if not localappdata:
-            raise OSError(translator.get('bypass.localappdata_not_found') if translator else "LOCALAPPDATA environment variable not found")
-        
-        product_json_path = os.path.join(localappdata, "Programs", "Cursor", "resources", "app", "product.json")
-        
-        # Check if path exists in config
-        if 'WindowsPaths' in config and 'cursor_path' in config['WindowsPaths']:
-            cursor_path = config.get('WindowsPaths', 'cursor_path')
-            product_json_path = os.path.join(cursor_path, "product.json")
-    
-    elif system == "Darwin":  # macOS
-        product_json_path = "/Applications/Cursor.app/Contents/Resources/app/product.json"
-    
-    elif system == "Linux":
-        # Try multiple common paths
-        possible_paths = [
-            "/opt/Cursor/resources/app/product.json",
-            "/usr/share/cursor/resources/app/product.json",
-            "/usr/lib/cursor/app/product.json"
-        ]
-        
-        # Add extracted AppImage paths
-        extracted_usr_paths = os.path.expanduser("~/squashfs-root/usr/share/cursor/resources/app/product.json")
-        if os.path.exists(extracted_usr_paths):
-            possible_paths.append(extracted_usr_paths)
-        
-        for path in possible_paths:
-            if os.path.exists(path):
-                product_json_path = path
-                break
-        else:
-            raise OSError(translator.get('bypass.product_json_not_found') if translator else "product.json not found in common Linux paths")
-    
-    else:
-        raise OSError(translator.get('bypass.unsupported_os', system=system) if translator else f"Unsupported operating system: {system}")
-    
-    if not os.path.exists(product_json_path):
-        raise OSError(translator.get('bypass.file_not_found', path=product_json_path) if translator else f"File not found: {product_json_path}")
-    
+    product_json_path = get_cursor_product_json_path()
+    if not product_json_path:
+        configured = get_resolved_cursor_app_path()
+        raise OSError(translator.get('bypass.file_not_found', path=configured or 'product.json') if translator else f"File not found: product.json")
     return product_json_path
 
 def compare_versions(version1, version2):

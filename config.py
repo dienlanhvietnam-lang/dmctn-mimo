@@ -2,7 +2,7 @@ import os
 import sys
 import configparser
 from colorama import Fore, Style
-from utils import get_user_documents_path, get_default_chrome_path, get_linux_cursor_path
+from utils import get_user_documents_path, get_default_chrome_path, get_linux_cursor_path, resolve_cursor_app_path, get_cursor_paths_section
 import shutil
 import datetime
 
@@ -55,7 +55,8 @@ def setup_config(translator=None):
             'Utils': {
                 'enabled_update_check': 'True',
                 'enabled_force_update': 'False',
-                'enabled_account_info': 'True'
+                'enabled_account_info': 'True',
+                'language': 'vi'
             }
         }
 
@@ -67,7 +68,7 @@ def setup_config(translator=None):
                 'storage_path': os.path.join(appdata, "Cursor", "User", "globalStorage", "storage.json"),
                 'sqlite_path': os.path.join(appdata, "Cursor", "User", "globalStorage", "state.vscdb"),
                 'machine_id_path': os.path.join(appdata, "Cursor", "machineId"),
-                'cursor_path': os.path.join(localappdata, "Programs", "Cursor", "resources", "app"),
+                'cursor_path': resolve_cursor_app_path(os.path.join(localappdata, "Programs", "Cursor", "resources", "app")) or os.path.join(localappdata, "Programs", "Cursor", "resources", "app"),
                 'updater_path': os.path.join(localappdata, "cursor-updater"),
                 'update_yml_path': os.path.join(localappdata, "Programs", "Cursor", "resources", "app-update.yml"),
                 'product_json_path': os.path.join(localappdata, "Programs", "Cursor", "resources", "app", "product.json")
@@ -223,8 +224,10 @@ def setup_config(translator=None):
 
             with open(config_file, 'w', encoding='utf-8') as f:
                 config.write(f)
-            if translator:
-                print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {translator.get('config.config_created', config_file=config_file) if translator else f'Config created: {config_file}'}{Style.RESET_ALL}")
+                if translator:
+                    print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {translator.get('config.config_created', config_file=config_file) if translator else f'Config created: {config_file}'}{Style.RESET_ALL}")
+
+        _sync_cursor_install_paths(config, config_file)
 
         return config
 
@@ -232,6 +235,28 @@ def setup_config(translator=None):
         if translator:
             print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('config.config_setup_error', error=str(e)) if translator else f'Error setting up config: {str(e)}'}{Style.RESET_ALL}")
         return None
+
+def _sync_cursor_install_paths(config, config_file):
+    """Keep cursor_path and derived paths aligned with the actual install."""
+    try:
+        section = get_cursor_paths_section()
+        if not config.has_section(section):
+            return
+        configured = config.get(section, 'cursor_path', fallback='')
+        resolved = resolve_cursor_app_path(configured)
+        if not resolved:
+            return
+        product_json = os.path.join(resolved, 'product.json')
+        update_yml = os.path.join(os.path.dirname(resolved), 'app-update.yml')
+        current_product = config.get(section, 'product_json_path', fallback='')
+        if configured != resolved or current_product != product_json or not os.path.isfile(current_product):
+            config.set(section, 'cursor_path', resolved)
+            config.set(section, 'product_json_path', product_json)
+            config.set(section, 'update_yml_path', update_yml)
+            with open(config_file, 'w', encoding='utf-8') as f:
+                config.write(f)
+    except Exception:
+        pass
     
 def print_config(config, translator=None):
     """Print configuration in a readable format"""

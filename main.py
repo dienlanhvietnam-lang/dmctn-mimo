@@ -85,6 +85,10 @@ class Translator:
     
     def detect_system_language(self):
         """Detect system language and return corresponding language code"""
+        env_lang = os.getenv('CURSOR_FREE_VIP_LANG', '').strip().lower()
+        if env_lang:
+            return env_lang
+
         try:
             system = platform.system()
             
@@ -289,7 +293,8 @@ def print_menu():
         14: f"{Fore.GREEN}14{Style.RESET_ALL}. {EMOJI['ERROR']}  {translator.get('menu.delete_google_account', fallback='Delete Cursor Google Account')}",
         15: f"{Fore.GREEN}15{Style.RESET_ALL}. {EMOJI['UPDATE']}  {translator.get('menu.bypass_version_check', fallback='Bypass Cursor Version Check')}",
         16: f"{Fore.GREEN}16{Style.RESET_ALL}. {EMOJI['UPDATE']}  {translator.get('menu.check_user_authorized', fallback='Check User Authorized')}",
-        17: f"{Fore.GREEN}17{Style.RESET_ALL}. {EMOJI['UPDATE']}  {translator.get('menu.bypass_token_limit', fallback='Bypass Token Limit')}"
+        17: f"{Fore.GREEN}17{Style.RESET_ALL}. {EMOJI['UPDATE']}  {translator.get('menu.bypass_token_limit', fallback='Bypass Token Limit')}",
+        18: f"{Fore.GREEN}18{Style.RESET_ALL}. {EMOJI['STAR']}  {translator.get('menu.activate_vip', fallback='Activate VIP Account')}"
     }
     
     # Automatically calculate the number of menu items in the left and right columns
@@ -554,6 +559,10 @@ def main():
     if not config:
         print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('menu.config_init_failed')}{Style.RESET_ALL}")
         return
+    if not os.getenv('CURSOR_FREE_VIP_LANG') and config.has_option('Utils', 'language'):
+        config_lang = config.get('Utils', 'language').strip().lower()
+        if config_lang:
+            translator.set_language(config_lang)
     force_update_config(translator)
 
     if config.getboolean('Utils', 'enabled_update_check'):
@@ -562,7 +571,7 @@ def main():
     
     while True:
         try:
-            choice_num = 17
+            choice_num = 18
             choice = input(f"\n{EMOJI['ARROW']} {Fore.CYAN}{translator.get('menu.input_choice', choices=f'0-{choice_num}')}: {Style.RESET_ALL}")
 
             if choice == "0":
@@ -639,6 +648,10 @@ def main():
             elif choice == "17":
                 import bypass_token_limit
                 bypass_token_limit.run(translator)
+                print_menu()
+            elif choice == "18":
+                import vip_activate
+                vip_activate.run(translator)
                 print_menu()
             else:
                 print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('menu.invalid_choice')}{Style.RESET_ALL}")

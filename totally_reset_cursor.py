@@ -15,6 +15,8 @@ from new_signup import get_user_documents_path
 import traceback
 from config import get_config
 import glob
+from reset_machine_manual import get_cursor_paths, get_workbench_cursor_path, get_cursor_machine_id_path
+from workbench_patches import apply_workbench_patches
 
 # Initialize colorama
 init()
@@ -29,194 +31,6 @@ EMOJI = {
     "RESET": "🔄",
     "WARNING": "⚠️",
 }
-
-def get_cursor_paths(translator=None) -> Tuple[str, str]:
-    """ Get Cursor related paths"""
-    system = platform.system()
-    
-    # Read config file
-    config = configparser.ConfigParser()
-    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
-    config_file = os.path.join(config_dir, "config.ini")
-    
-    # Create config directory if it doesn't exist
-    if not os.path.exists(config_dir):
-        os.makedirs(config_dir)
-    
-    # Default paths for different systems
-    default_paths = {
-        "Darwin": "/Applications/Cursor.app/Contents/Resources/app",
-        "Windows": os.path.join(os.getenv("LOCALAPPDATA", ""), "Programs", "Cursor", "resources", "app"),
-        "Linux": ["/opt/Cursor/resources/app", "/usr/share/cursor/resources/app", os.path.expanduser("~/.local/share/cursor/resources/app")]
-    }
-    
-    if system == "Linux":
-        # Look for extracted AppImage directories - with usr structure
-        extracted_usr_paths = glob.glob(os.path.expanduser("~/squashfs-root/usr/share/cursor/resources/app"))
-        # Check current directory for extraction without home path prefix
-        current_dir_paths = glob.glob("squashfs-root/usr/share/cursor/resources/app")
-        
-        # Add all paths to the Linux paths list
-        default_paths["Linux"].extend(extracted_usr_paths)
-        default_paths["Linux"].extend(current_dir_paths)
-
-        # Print debug info for troubleshooting
-        print(f"{Fore.CYAN}{EMOJI['INFO']} Available paths found:{Style.RESET_ALL}")
-        for path in default_paths["Linux"]:
-            if os.path.exists(path):
-                print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {path} (exists){Style.RESET_ALL}")
-            else:
-                print(f"{Fore.RED}{EMOJI['ERROR']} {path} (not found){Style.RESET_ALL}")
-    
-    # If config doesn't exist, create it with default paths
-    if not os.path.exists(config_file):
-        for section in ['MacPaths', 'WindowsPaths', 'LinuxPaths']:
-            if not config.has_section(section):
-                config.add_section(section)
-        
-        if system == "Darwin":
-            config.set('MacPaths', 'cursor_path', default_paths["Darwin"])
-        elif system == "Windows":
-            config.set('WindowsPaths', 'cursor_path', default_paths["Windows"])
-        elif system == "Linux":
-            # For Linux, try to find the first existing path
-            for path in default_paths["Linux"]:
-                if os.path.exists(path):
-                    config.set('LinuxPaths', 'cursor_path', path)
-                    break
-            else:
-                # If no path exists, use the first one as default
-                config.set('LinuxPaths', 'cursor_path', default_paths["Linux"][0])
-        
-        with open(config_file, 'w', encoding='utf-8') as f:
-            config.write(f)
-    else:
-        config.read(config_file, encoding='utf-8')
-    
-    # Get path based on system
-    if system == "Darwin":
-        section = 'MacPaths'
-    elif system == "Windows":
-        section = 'WindowsPaths'
-    elif system == "Linux":
-        section = 'LinuxPaths'
-    else:
-        raise OSError(translator.get('reset.unsupported_os', system=system) if translator else f"不支持的操作系统: {system}")
-    
-    if not config.has_section(section) or not config.has_option(section, 'cursor_path'):
-        raise OSError(translator.get('reset.path_not_configured') if translator else "未配置 Cursor 路徑")
-    
-    base_path = config.get(section, 'cursor_path')
-    
-    # For Linux, try to find the first existing path if the configured one doesn't exist
-    if system == "Linux" and not os.path.exists(base_path):
-        for path in default_paths["Linux"]:
-            if os.path.exists(path):
-                base_path = path
-                # Update config with the found path
-                config.set(section, 'cursor_path', path)
-                with open(config_file, 'w', encoding='utf-8') as f:
-                    config.write(f)
-                break
-    
-    if not os.path.exists(base_path):
-        raise OSError(translator.get('reset.path_not_found', path=base_path) if translator else f"找不到 Cursor 路徑: {base_path}")
-    
-    pkg_path = os.path.join(base_path, "package.json")
-    main_path = os.path.join(base_path, "out/main.js")
-    
-    # Check if files exist
-    if not os.path.exists(pkg_path):
-        raise OSError(translator.get('reset.package_not_found', path=pkg_path) if translator else f"找不到 package.json: {pkg_path}")
-    if not os.path.exists(main_path):
-        raise OSError(translator.get('reset.main_not_found', path=main_path) if translator else f"找不到 main.js: {main_path}")
-    
-    return (pkg_path, main_path)
-
-def get_cursor_machine_id_path(translator=None) -> str:
-    """
-    Get Cursor machineId file path based on operating system
-    Returns:
-        str: Path to machineId file
-    """
-    # Read configuration
-    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
-    config_file = os.path.join(config_dir, "config.ini")
-    config = configparser.ConfigParser()
-    
-    if os.path.exists(config_file):
-        config.read(config_file)
-    
-    if sys.platform == "win32":  # Windows
-        if not config.has_section('WindowsPaths'):
-            config.add_section('WindowsPaths')
-            config.set('WindowsPaths', 'machine_id_path', 
-                os.path.join(os.getenv("APPDATA"), "Cursor", "machineId"))
-        return config.get('WindowsPaths', 'machine_id_path')
-        
-    elif sys.platform == "linux":  # Linux
-        if not config.has_section('LinuxPaths'):
-            config.add_section('LinuxPaths')
-            config.set('LinuxPaths', 'machine_id_path',
-                os.path.expanduser("~/.config/cursor/machineid"))
-        return config.get('LinuxPaths', 'machine_id_path')
-        
-    elif sys.platform == "darwin":  # macOS
-        if not config.has_section('MacPaths'):
-            config.add_section('MacPaths')
-            config.set('MacPaths', 'machine_id_path',
-                os.path.expanduser("~/Library/Application Support/Cursor/machineId"))
-        return config.get('MacPaths', 'machine_id_path')
-        
-    else:
-        raise OSError(f"Unsupported operating system: {sys.platform}")
-
-    # Save any changes to config file
-    with open(config_file, 'w', encoding='utf-8') as f:
-        config.write(f)
-
-def get_workbench_cursor_path(translator=None) -> str:
-    """Get Cursor workbench.desktop.main.js path"""
-    system = platform.system()
-    
-    paths_map = {
-        "Darwin": {  # macOS
-            "base": "/Applications/Cursor.app/Contents/Resources/app",
-            "main": "out/vs/workbench/workbench.desktop.main.js"
-        },
-        "Windows": {
-            "base": os.path.join(os.getenv("LOCALAPPDATA", ""), "Programs", "Cursor", "resources", "app"),
-            "main": "out/vs/workbench/workbench.desktop.main.js"
-        },
-        "Linux": {
-            "bases": ["/opt/Cursor/resources/app", "/usr/share/cursor/resources/app"],
-            "main": "out/vs/workbench/workbench.desktop.main.js"
-        }
-    }
-
-    if system == "Linux":
-        # Look for extracted AppImage with correct usr structure
-        extracted_usr_paths = glob.glob(os.path.expanduser("~/squashfs-root/usr/share/cursor/resources/app"))
-        # Check current directory for extraction
-        current_dir_paths = glob.glob("squashfs-root/usr/share/cursor/resources/app")
-  
-        
-        paths_map["Linux"]["bases"].extend(extracted_usr_paths)
-        paths_map["Linux"]["bases"].extend(current_dir_paths)
-
-        for base in paths_map["Linux"]["bases"]:
-            main_path = os.path.join(base, paths_map["Linux"]["main"])
-            if os.path.exists(main_path):
-                return main_path
-        raise OSError(translator.get('reset.linux_path_not_found') if translator else "在 Linux 系统上未找到 Cursor 安装路径")
-
-    base_path = paths_map[system]["base"]
-    main_path = os.path.join(base_path, paths_map[system]["main"])
-    
-    if not os.path.exists(main_path):
-        raise OSError(translator.get('reset.file_not_found', path=main_path) if translator else f"未找到 Cursor main.js 文件: {main_path}")
-        
-    return main_path
 
 def version_check(version: str, min_version: str = "", max_version: str = "", translator=None) -> bool:
     """Version number check"""
@@ -322,27 +136,7 @@ def modify_workbench_js(file_path: str, translator=None) -> bool:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as main_file:
                 content = main_file.read()
 
-            if sys.platform == "win32":
-                # Define replacement patterns
-                CButton_old_pattern = r'$(k,E(Ks,{title:"Upgrade to Pro",size:"small",get codicon(){return F.rocket},get onClick(){return t.pay}}),null)'
-                CButton_new_pattern = r'$(k,E(Ks,{title:"hovanhoa GitHub",size:"small",get codicon(){return F.rocket},get onClick(){return function(){window.open("https://github.com/hovanhoa/cursor-free-vip","_blank")}}}),null)'
-            elif sys.platform == "linux":
-                CButton_old_pattern = r'$(k,E(Ks,{title:"Upgrade to Pro",size:"small",get codicon(){return F.rocket},get onClick(){return t.pay}}),null)'
-                CButton_new_pattern = r'$(k,E(Ks,{title:"hovanhoa GitHub",size:"small",get codicon(){return F.rocket},get onClick(){return function(){window.open("https://github.com/hovanhoa/cursor-free-vip","_blank")}}}),null)'
-            elif sys.platform == "darwin":
-                CButton_old_pattern = r'M(x,I(as,{title:"Upgrade to Pro",size:"small",get codicon(){return $.rocket},get onClick(){return t.pay}}),null)'
-                CButton_new_pattern = r'M(x,I(as,{title:"hovanhoa GitHub",size:"small",get codicon(){return $.rocket},get onClick(){return function(){window.open("https://github.com/hovanhoa/cursor-free-vip","_blank")}}}),null)'
-
-            CBadge_old_pattern = r'<div>Pro Trial'
-            CBadge_new_pattern = r'<div>Pro'
-
-            CToast_old_pattern = r'notifications-toasts'
-            CToast_new_pattern = r'notifications-toasts hidden'
-
-            # Replace content
-            content = content.replace(CButton_old_pattern, CButton_new_pattern)
-            content = content.replace(CBadge_old_pattern, CBadge_new_pattern)
-            content = content.replace(CToast_old_pattern, CToast_new_pattern)
+            content, _ = apply_workbench_patches(content)
 
             # Write to temporary file
             tmp_file.write(content)

@@ -2,6 +2,8 @@ import os
 import sys
 import platform
 import random
+import shutil
+import configparser
 
 def get_user_documents_path():
     """Get user documents path"""
@@ -40,6 +42,126 @@ def get_linux_cursor_path():
     
     # return the first path that exists
     return next((path for path in possible_paths if os.path.exists(path)), possible_paths[0])
+
+def _is_valid_cursor_app_path(path):
+    return path and os.path.isfile(os.path.join(path, "package.json"))
+
+def resolve_cursor_app_path(configured_path=None):
+    """Find Cursor resources/app directory, preferring a valid configured path."""
+    if _is_valid_cursor_app_path(configured_path):
+        return os.path.normpath(configured_path)
+
+    candidates = []
+    if sys.platform == "win32":
+        for name in ("cursor", "cursor.cmd"):
+            cursor_bin = shutil.which(name)
+            if cursor_bin:
+                candidates.append(os.path.normpath(os.path.join(os.path.dirname(cursor_bin), "..")))
+        localappdata = os.getenv("LOCALAPPDATA", "")
+        candidates.extend([
+            os.path.join(localappdata, "Programs", "Cursor", "resources", "app"),
+            os.path.join(localappdata, "Programs", "cursor", "resources", "app"),
+            r"C:\Program Files\Cursor\resources\app",
+        ])
+    elif sys.platform == "darwin":
+        candidates.append("/Applications/Cursor.app/Contents/Resources/app")
+    else:
+        candidates.extend([
+            get_linux_cursor_path(),
+            "/opt/Cursor/resources/app",
+            "/usr/share/cursor/resources/app",
+            os.path.expanduser("~/.local/share/cursor/resources/app"),
+        ])
+
+    seen = set()
+    for path in candidates:
+        path = os.path.normpath(path)
+        if path in seen:
+            continue
+        seen.add(path)
+        if _is_valid_cursor_app_path(path):
+            return path
+
+    return os.path.normpath(configured_path) if configured_path else None
+
+def get_cursor_paths_section():
+    if sys.platform == "win32":
+        return "WindowsPaths"
+    if sys.platform == "darwin":
+        return "MacPaths"
+    return "LinuxPaths"
+
+def persist_cursor_app_path(app_path):
+    """Save resolved Cursor app path and related paths to config.ini."""
+    if not app_path:
+        return
+    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+    config_file = os.path.join(config_dir, "config.ini")
+    config = configparser.ConfigParser()
+    if os.path.exists(config_file):
+        config.read(config_file, encoding="utf-8")
+    section = get_cursor_paths_section()
+    if not config.has_section(section):
+        config.add_section(section)
+    config.set(section, "cursor_path", app_path)
+    config.set(section, "product_json_path", os.path.join(app_path, "product.json"))
+    resources_dir = os.path.dirname(app_path)
+    for name in ("app-update.yml", "update.yml"):
+        update_yml = os.path.join(resources_dir, name)
+        if os.path.exists(update_yml) or name == "app-update.yml":
+            config.set(section, "update_yml_path", update_yml)
+            break
+    os.makedirs(config_dir, exist_ok=True)
+    with open(config_file, "w", encoding="utf-8") as f:
+        config.write(f)
+
+def get_configured_cursor_app_path():
+    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+    config_file = os.path.join(config_dir, "config.ini")
+    configured = None
+    if os.path.exists(config_file):
+        config = configparser.ConfigParser()
+        config.read(config_file, encoding="utf-8")
+        section = get_cursor_paths_section()
+        if config.has_section(section) and config.has_option(section, "cursor_path"):
+            configured = config.get(section, "cursor_path")
+    return configured
+
+def get_resolved_cursor_app_path(configured_path=None):
+    """Resolve Cursor app path and persist when auto-detected."""
+    if configured_path is None:
+        configured_path = get_configured_cursor_app_path()
+    resolved = resolve_cursor_app_path(configured_path)
+    if resolved and resolved != configured_path:
+        persist_cursor_app_path(resolved)
+    elif resolved and not configured_path:
+        persist_cursor_app_path(resolved)
+    return resolved
+
+def get_cursor_product_json_path(configured_path=None):
+    app_path = get_resolved_cursor_app_path(configured_path)
+    if not app_path:
+        return None
+    path = os.path.join(app_path, "product.json")
+    return path if os.path.isfile(path) else None
+
+def get_cursor_main_js_path(configured_path=None):
+    app_path = get_resolved_cursor_app_path(configured_path)
+    if not app_path:
+        return None
+    path = os.path.join(app_path, "out", "main.js")
+    return path if os.path.isfile(path) else None
+
+def get_cursor_workbench_path(app_path=None):
+    """Return path to workbench.desktop.main.js."""
+    base = app_path or get_resolved_cursor_app_path()
+    if not base:
+        return None
+    main = os.path.join(base, "out", "vs", "workbench", "workbench.desktop.main.js")
+    return main if os.path.isfile(main) else None
+
+def should_keep_cursor_running():
+    return os.getenv("CURSOR_FREE_VIP_KEEP_RUNNING", "").strip().lower() in ("1", "true", "yes", "on")
 
 def get_random_wait_time(config, timing_key):
     """Get random wait time based on configuration timing settings

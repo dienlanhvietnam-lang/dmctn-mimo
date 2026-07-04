@@ -15,6 +15,8 @@ import configparser
 from new_signup import get_user_documents_path
 import traceback
 from config import get_config
+from utils import get_resolved_cursor_app_path, get_cursor_workbench_path, get_cursor_paths_section
+from workbench_patches import apply_workbench_patches
 from datetime import datetime
 
 # Initialize colorama
@@ -108,21 +110,11 @@ def get_cursor_paths(translator=None) -> Tuple[str, str]:
     if not config.has_section(section) or not config.has_option(section, 'cursor_path'):
         raise OSError(translator.get('reset.path_not_configured') if translator else "未配置 Cursor 路徑")
     
-    base_path = config.get(section, 'cursor_path')
+    configured_path = config.get(section, 'cursor_path')
+    base_path = get_resolved_cursor_app_path(configured_path)
     
-    # For Linux, try to find the first existing path if the configured one doesn't exist
-    if system == "Linux" and not os.path.exists(base_path):
-        for path in default_paths["Linux"]:
-            if os.path.exists(path):
-                base_path = path
-                # Update config with the found path
-                config.set(section, 'cursor_path', path)
-                with open(config_file, 'w', encoding='utf-8') as f:
-                    config.write(f)
-                break
-    
-    if not os.path.exists(base_path):
-        raise OSError(translator.get('reset.path_not_found', path=base_path) if translator else f"找不到 Cursor 路徑: {base_path}")
+    if not base_path or not os.path.exists(base_path):
+        raise OSError(translator.get('reset.path_not_found', path=configured_path or base_path) if translator else f"找不到 Cursor 路徑: {configured_path}")
     
     pkg_path = os.path.join(base_path, "package.json")
     main_path = os.path.join(base_path, "out/main.js")
@@ -179,60 +171,20 @@ def get_cursor_machine_id_path(translator=None) -> str:
 
 def get_workbench_cursor_path(translator=None) -> str:
     """Get Cursor workbench.desktop.main.js path"""
-    system = platform.system()
-
-    # Read configuration
     config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
     config_file = os.path.join(config_dir, "config.ini")
     config = configparser.ConfigParser()
+    configured_path = None
 
     if os.path.exists(config_file):
         config.read(config_file)
-    
-    paths_map = {
-        "Darwin": {  # macOS
-            "base": "/Applications/Cursor.app/Contents/Resources/app",
-            "main": "out/vs/workbench/workbench.desktop.main.js"
-        },
-        "Windows": {
-            "main": "out\\vs\\workbench\\workbench.desktop.main.js"
-        },
-        "Linux": {
-            "bases": ["/opt/Cursor/resources/app", "/usr/share/cursor/resources/app", "/usr/lib/cursor/app/"],
-            "main": "out/vs/workbench/workbench.desktop.main.js"
-        }
-    }
-    
-    if system == "Linux":
-        # Add extracted AppImage with correct usr structure
-        extracted_usr_paths = glob.glob(os.path.expanduser("~/squashfs-root/usr/share/cursor/resources/app"))
-            
-        paths_map["Linux"]["bases"].extend(extracted_usr_paths)
+        section = get_cursor_paths_section()
+        if config.has_section(section) and config.has_option(section, 'cursor_path'):
+            configured_path = config.get(section, 'cursor_path')
 
-    if system not in paths_map:
-        raise OSError(translator.get('reset.unsupported_os', system=system) if translator else f"不支持的操作系统: {system}")
-
-    if system == "Linux":
-        for base in paths_map["Linux"]["bases"]:
-            main_path = os.path.join(base, paths_map["Linux"]["main"])
-            print(f"{Fore.CYAN}{EMOJI['INFO']} Checking path: {main_path}{Style.RESET_ALL}")
-            if os.path.exists(main_path):
-                return main_path
-
-    if system == "Windows":
-        base_path = config.get('WindowsPaths', 'cursor_path')
-    elif system == "Darwin":
-        base_path = paths_map[system]["base"]
-    else:  # Linux
-        # For Linux, we've already checked all bases in the loop above
-        # If we're here, it means none of the bases worked, so we'll use the first one
-        base_path = paths_map[system]["bases"][0]
-
-    main_path = os.path.join(base_path, paths_map[system]["main"])
-    
-    if not os.path.exists(main_path):
-        raise OSError(translator.get('reset.file_not_found', path=main_path) if translator else f"未找到 Cursor main.js 文件: {main_path}")
-        
+    main_path = get_cursor_workbench_path(get_resolved_cursor_app_path(configured_path))
+    if not main_path:
+        raise OSError(translator.get('reset.file_not_found', path=configured_path or 'workbench.desktop.main.js') if translator else f"未找到 Cursor main.js 文件")
     return main_path
 
 def version_check(version: str, min_version: str = "", max_version: str = "", translator=None) -> bool:
@@ -339,30 +291,7 @@ def modify_workbench_js(file_path: str, translator=None) -> bool:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as main_file:
                 content = main_file.read()
 
-            patterns = {
-                # 通用按钮替换模式
-                r'B(k,D(Ln,{title:"Upgrade to Pro",size:"small",get codicon(){return A.rocket},get onClick(){return t.pay}}),null)': r'B(k,D(Ln,{title:"hovanhoa GitHub",size:"small",get codicon(){return A.github},get onClick(){return function(){window.open("https://github.com/hovanhoa/cursor-free-vip","_blank")}}}),null)',
-                
-                # Windows/Linux/Mac 通用按钮替换模式
-                r'M(x,I(as,{title:"Upgrade to Pro",size:"small",get codicon(){return $.rocket},get onClick(){return t.pay}}),null)': r'M(x,I(as,{title:"hovanhoa GitHub",size:"small",get codicon(){return $.rocket},get onClick(){return function(){window.open("https://github.com/hovanhoa/cursor-free-vip","_blank")}}}),null)',
-                
-                # Badge 替换
-                r'<div>Pro Trial': r'<div>Pro',
-
-                r'py-1">Auto-select': r'py-1">Bypass-Version-Pin',
-                
-                #
-                r'async getEffectiveTokenLimit(e){const n=e.modelName;if(!n)return 2e5;':r'async getEffectiveTokenLimit(e){return 9000000;const n=e.modelName;if(!n)return 9e5;',
-                # Pro
-                r'var DWr=ne("<div class=settings__item_description>You are currently signed in with <strong></strong>.");': r'var DWr=ne("<div class=settings__item_description>You are currently signed in with <strong></strong>. <h1>Pro</h1>");',
-                
-                # Toast 替换
-                r'notifications-toasts': r'notifications-toasts hidden'
-            }
-
-            # 使用patterns进行替换
-            for old_pattern, new_pattern in patterns.items():
-                content = content.replace(old_pattern, new_pattern)
+            content, _ = apply_workbench_patches(content)
 
             # Write to temporary file
             tmp_file.write(content)
@@ -620,21 +549,29 @@ class MachineIDResetter:
             return False
 
     def update_system_ids(self, new_ids):
-        """Update system-level IDs"""
-        try:
-            print(f"{Fore.CYAN}{EMOJI['INFO']} {self.translator.get('reset.updating_system_ids')}...{Style.RESET_ALL}")
-            
-            if sys.platform.startswith("win"):
-                self._update_windows_machine_guid()
-                self._update_windows_machine_id()
-            elif sys.platform == "darwin":
+        """Update system-level IDs (optional; requires admin on Windows)."""
+        print(f"{Fore.CYAN}{EMOJI['INFO']} {self.translator.get('reset.updating_system_ids')}...{Style.RESET_ALL}")
+
+        if sys.platform.startswith("win"):
+            for updater, label in (
+                (self._update_windows_machine_guid, "MachineGuid"),
+                (self._update_windows_machine_id, "SQMClient MachineId"),
+            ):
+                try:
+                    updater()
+                except PermissionError as e:
+                    print(f"{Fore.YELLOW}{EMOJI['WARNING']} {self.translator.get('reset.permission_denied', error=str(e))}{Style.RESET_ALL}")
+                    print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('reset.run_as_admin')}{Style.RESET_ALL}")
+                except Exception as e:
+                    print(f"{Fore.YELLOW}{EMOJI['WARNING']} {label} skipped: {e}{Style.RESET_ALL}")
+        elif sys.platform == "darwin":
+            try:
                 self._update_macos_platform_uuid(new_ids)
-                
-            print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {self.translator.get('reset.system_ids_updated')}{Style.RESET_ALL}")
-            return True
-        except Exception as e:
-            print(f"{Fore.RED}{EMOJI['ERROR']} {self.translator.get('reset.system_ids_update_failed', error=str(e))}{Style.RESET_ALL}")
-            return False
+            except Exception as e:
+                print(f"{Fore.YELLOW}{EMOJI['WARNING']} {self.translator.get('reset.system_ids_update_failed', error=str(e))}{Style.RESET_ALL}")
+
+        print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {self.translator.get('reset.system_ids_updated')}{Style.RESET_ALL}")
+        return True
 
     def _update_windows_machine_guid(self):
         """Update Windows MachineGuid"""
@@ -687,8 +624,8 @@ class MachineIDResetter:
             print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {self.translator.get('reset.windows_machine_id_updated')}{Style.RESET_ALL}")
             return True
             
-        except PermissionError:
-            print(f"{Fore.RED}{EMOJI['ERROR']} {self.translator.get('reset.permission_denied')}{Style.RESET_ALL}")
+        except PermissionError as e:
+            print(f"{Fore.RED}{EMOJI['ERROR']} {self.translator.get('reset.permission_denied', error=str(e))}{Style.RESET_ALL}")
             print(f"{Fore.YELLOW}{EMOJI['WARNING']} {self.translator.get('reset.run_as_admin')}{Style.RESET_ALL}")
             return False
         except Exception as e:
@@ -763,6 +700,12 @@ class MachineIDResetter:
                 patch_cursor_get_machine_id(self.translator)
             else:
                 print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('reset.version_less_than_0_45')}{Style.RESET_ALL}")
+
+            try:
+                from vip_activate import activate_vip_membership
+                activate_vip_membership(self.translator)
+            except Exception as e:
+                print(f"{Fore.YELLOW}{EMOJI['WARNING']} VIP: {e}{Style.RESET_ALL}")
 
             print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {self.translator.get('reset.success')}{Style.RESET_ALL}")
             print(f"\n{Fore.CYAN}{self.translator.get('reset.new_id')}:{Style.RESET_ALL}")

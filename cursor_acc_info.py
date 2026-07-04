@@ -143,14 +143,13 @@ def get_token_from_storage(storage_path):
     try:
         with open(storage_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            # try to get accessToken
-            if 'cursorAuth/accessToken' in data:
-                return data['cursorAuth/accessToken']
-            
-            # try other possible keys
-            for key in data:
-                if 'token' in key.lower() and isinstance(data[key], str) and len(data[key]) > 20:
-                    return data[key]
+            token = data.get('cursorAuth/accessToken')
+            if isinstance(token, str) and token.startswith('eyJ'):
+                return token
+            for key in ('cursorAuth/refreshToken',):
+                value = data.get(key)
+                if isinstance(value, str) and value.startswith('eyJ'):
+                    return value
     except Exception as e:
         logger.error(f"get token from storage.json failed: {str(e)}")
     
@@ -164,21 +163,13 @@ def get_token_from_sqlite(sqlite_path):
     try:
         conn = sqlite3.connect(sqlite_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT value FROM ItemTable WHERE key LIKE '%token%'")
-        rows = cursor.fetchall()
+        for key in ('cursorAuth/accessToken', 'cursorAuth/refreshToken'):
+            cursor.execute("SELECT value FROM ItemTable WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            if row and isinstance(row[0], str) and row[0].startswith('eyJ'):
+                conn.close()
+                return row[0]
         conn.close()
-        
-        for row in rows:
-            try:
-                value = row[0]
-                if isinstance(value, str) and len(value) > 20:
-                    return value
-                # try to parse JSON
-                data = json.loads(value)
-                if isinstance(data, dict) and 'token' in data:
-                    return data['token']
-            except:
-                continue
     except Exception as e:
         logger.error(f"get token from sqlite failed: {str(e)}")
     
@@ -311,32 +302,11 @@ def get_email_from_sqlite(sqlite_path):
     try:
         conn = sqlite3.connect(sqlite_path)
         cursor = conn.cursor()
-        # try to query records containing email
-        cursor.execute("SELECT value FROM ItemTable WHERE key LIKE '%email%' OR key LIKE '%cursorAuth%'")
-        rows = cursor.fetchall()
+        cursor.execute("SELECT value FROM ItemTable WHERE key = ?", ('cursorAuth/cachedEmail',))
+        row = cursor.fetchone()
         conn.close()
-        
-        for row in rows:
-            try:
-                value = row[0]
-                # if it's a string and contains @, it might be an email
-                if isinstance(value, str) and '@' in value:
-                    return value
-                
-                # try to parse JSON
-                try:
-                    data = json.loads(value)
-                    if isinstance(data, dict):
-                        # check if there's an email field
-                        if 'email' in data:
-                            return data['email']
-                        # check if there's a cachedEmail field
-                        if 'cachedEmail' in data:
-                            return data['cachedEmail']
-                except:
-                    pass
-            except:
-                continue
+        if row and isinstance(row[0], str) and '@' in row[0]:
+            return row[0]
     except Exception as e:
         logger.error(f"get email from sqlite failed: {str(e)}")
     
