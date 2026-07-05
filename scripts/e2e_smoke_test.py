@@ -18,12 +18,8 @@ from contextlib import redirect_stderr, redirect_stdout
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
-os.environ.setdefault("MIMO_VIP_LANG", "vi")
-os.environ.setdefault("MIMO_VIP_KEEP_RUNNING", "1")
-os.environ.setdefault("MINO_VIP_LANG", os.environ["MIMO_VIP_LANG"])
-os.environ.setdefault("MINO_VIP_KEEP_RUNNING", os.environ["MIMO_VIP_KEEP_RUNNING"])
-os.environ.setdefault("CURSOR_FREE_VIP_LANG", os.environ["MIMO_VIP_LANG"])
-os.environ.setdefault("CURSOR_FREE_VIP_KEEP_RUNNING", os.environ["MIMO_VIP_KEEP_RUNNING"])
+os.environ.setdefault("DMCTN_MIMO_LANG", "vi")
+os.environ.setdefault("DMCTN_MIMO_KEEP_RUNNING", "1")
 
 RESULTS = []
 
@@ -35,9 +31,7 @@ def run_case(name, fn, verbose=False):
         if verbose:
             fn()
         else:
-            os.environ["MIMO_VIP_QUIET"] = "1"
-            os.environ["MINO_VIP_QUIET"] = "1"
-            os.environ["CURSOR_FREE_VIP_QUIET"] = "1"
+            os.environ["DMCTN_MIMO_QUIET"] = "1"
             with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
                 fn()
         RESULTS.append((name, "PASS", ""))
@@ -227,10 +221,10 @@ def test_mimo_auto_setup():
 def test_branding_mimo():
     from branding import APP_NAME, CONFIG_DIR_NAME, cli_process_env
 
-    assert APP_NAME == "MiMo VIP"
-    assert CONFIG_DIR_NAME == ".mimo-vip"
+    assert APP_NAME == "MiMo FREE"
+    assert CONFIG_DIR_NAME == ".dmctn-mimo"
     env = cli_process_env("vi")
-    assert env["MIMO_VIP_LANG"] == "vi"
+    assert env["DMCTN_MIMO_LANG"] == "vi"
     assert env["LANG"] == "vi_VN"
 
 
@@ -385,7 +379,7 @@ def main():
         ("12 mimo_reset helpers", test_12_mimo_reset_helpers),
         ("13 mimo_total helpers", test_13_mimo_total_helpers),
         ("mimo_auto setup", test_mimo_auto_setup),
-        ("branding MiMo VIP", test_branding_mimo),
+        ("branding MiMo FREE", test_branding_mimo),
         ("dashboard translations", test_dashboard_translations),
         ("save user language", test_save_user_language),
         ("extract oauth url", test_extract_oauth_url),

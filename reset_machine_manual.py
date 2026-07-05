@@ -702,10 +702,10 @@ class MachineIDResetter:
                 print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('reset.version_less_than_0_45')}{Style.RESET_ALL}")
 
             try:
-                from cursor_membership import activate_vip_membership
-                activate_vip_membership(self.translator)
+                from cursor_membership import activate_pro_membership
+                activate_pro_membership(self.translator)
             except Exception as e:
-                print(f"{Fore.YELLOW}{EMOJI['WARNING']} VIP: {e}{Style.RESET_ALL}")
+                print(f"{Fore.YELLOW}{EMOJI['WARNING']} Pro: {e}{Style.RESET_ALL}")
 
             print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {self.translator.get('reset.success')}{Style.RESET_ALL}")
             print(f"\n{Fore.CYAN}{self.translator.get('reset.new_id')}:{Style.RESET_ALL}")

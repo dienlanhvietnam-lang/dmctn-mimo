@@ -1,10 +1,9 @@
 @echo off
 chcp 65001 >nul
-title MiMo VIP
+title MiMo FREE
 cd /d "%~dp0"
 
-set MIMO_VIP_KEEP_RUNNING=1
-set MINO_VIP_KEEP_RUNNING=%MIMO_VIP_KEEP_RUNNING%
+set DMCTN_MIMO_KEEP_RUNNING=1
 
 where python >nul 2>&1
 if errorlevel 1 (

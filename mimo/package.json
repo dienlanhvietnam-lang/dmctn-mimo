@@ -2,7 +2,7 @@
   "name": "mimo",
   "version": "1.0.0",
   "private": true,
-  "description": "Local MiMo CLI for MiMo VIP project",
+  "description": "Local MiMo CLI for MiMo FREE project",
   "scripts": {
     "mimo": "mimo",
     "start": "mimo"

@@ -301,7 +301,7 @@ def force_update_config(translator=None):
                     if translator:
                         print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('config.backup_failed', error=str(e)) if translator else f'Failed to backup config: {str(e)}'}{Style.RESET_ALL}")
             else:
-                if translator and not env_flag("QUIET", legacy_env="CURSOR_FREE_VIP_QUIET"):
+                if translator and not env_flag("QUIET", legacy_env="DMCTN_MIMO_QUIET"):
                     print(f"\n{Fore.CYAN}{EMOJI['INFO']} {translator.get('config.config_force_update_disabled') if translator else 'Config file force update disabled by configuration. Keeping existing config file.'}{Style.RESET_ALL}")
 
         # Generate a new (or updated) configuration if needed

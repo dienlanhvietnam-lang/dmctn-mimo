@@ -25,8 +25,8 @@ PATCH_MARKERS = [
     "this.refreshMembership=async()=>{return;",
     "i=cs.PRO,this.storageService.store(Hgt",
     "s=Vr.PRO,this.storageService.store(Zmt",
-    "MiNo VIP",
-    "Cursor Free VIP",
+    "MiMo FREE",
+    "Cursor Free Pro",
     "notifications-toasts hidden",
     "Bypass-Version-Pin",
     "async performFetch(n){return;",
@@ -84,7 +84,7 @@ def restore_product_json(app_dir: Path) -> str:
     return "product.json restored from product.json.old"
 
 
-def clear_vip_auth_flags() -> str:
+def clear_pro_auth_flags() -> str:
     config = get_config()
     if not config:
         return "auth: config missing, skipped"
@@ -127,7 +127,7 @@ def clear_vip_auth_flags() -> str:
             with open(storage_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
 
-    return "auth: removed " + ", ".join(removed) if removed else "auth: no VIP overrides found"
+    return "auth: removed " + ", ".join(removed) if removed else "auth: no Pro overrides found"
 
 
 def cleanup_backups(workbench_dir: Path, keep: bool) -> str:
@@ -148,7 +148,7 @@ def cleanup_backups(workbench_dir: Path, keep: bool) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Restore Cursor to original (remove patches)")
     parser.add_argument("--keep-backups", action="store_true", help="Keep .bak files after restore")
-    parser.add_argument("--skip-auth", action="store_true", help="Do not clear local VIP auth flags")
+    parser.add_argument("--skip-auth", action="store_true", help="Do not clear local Pro auth flags")
     args = parser.parse_args()
 
     app_path = Path(get_resolved_cursor_app_path())
@@ -166,7 +166,7 @@ def main():
 
     results.append(restore_product_json(app_path.parent))
     if not args.skip_auth:
-        results.append(clear_vip_auth_flags())
+        results.append(clear_pro_auth_flags())
     results.append(cleanup_backups(workbench.parent, args.keep_backups))
 
     content = workbench.read_text(encoding="utf-8", errors="ignore")

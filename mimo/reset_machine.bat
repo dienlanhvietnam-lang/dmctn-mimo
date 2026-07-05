@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title MiMo VIP - Reset MiMo Machine ID
+title MiMo FREE - Reset MiMo Machine ID
 cd /d "%~dp0\.."
 
 where python >nul 2>&1

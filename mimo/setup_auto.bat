@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title MiMo VIP - Setup MiMo Auto + E2E
+title MiMo FREE - Setup MiMo Auto + E2E
 cd /d "%~dp0\.."
 
 where python >nul 2>&1

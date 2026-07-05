@@ -34,7 +34,7 @@ else:  # Darwin
 
 
 
-output_name = f"MiMoVIP_{version}_{os_type}"
+output_name = f"DmctnMimo_{version}_{os_type}"
 
 
 

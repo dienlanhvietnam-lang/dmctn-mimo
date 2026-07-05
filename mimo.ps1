@@ -1,4 +1,4 @@
-# MiMo CLI launcher — goi binary tu mino-vip, chay trong thu muc hien tai (cwd)
+# MiMo CLI launcher — goi binary tu thu muc repo, chay trong thu muc hien tai (cwd)
 $MimoRoot = Join-Path $PSScriptRoot "mimo"
 $MimoCmd = Join-Path $MimoRoot "node_modules\.bin\mimo.cmd"
 

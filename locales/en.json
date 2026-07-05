@@ -33,7 +33,7 @@
         "bypass_version_check": "Bypass Cursor Version Check",
         "check_user_authorized": "Check User Authorized",
         "bypass_token_limit": "Bypass Token Limit",
-        "activate_vip": "Activate VIP Account",
+        "activate_pro": "Activate Pro Account",
         "reset_mimo_machine": "Reset MiMo CLI Machine ID",
         "totally_reset_mimo": "Totally Reset MiMo CLI",
         "mimo_platform_login": "MiMo Platform Login (Chrome profile)",
@@ -87,17 +87,7 @@
     },
     "languages": {
         "en": "English",
-        "zh_cn": "简体中文",
-        "zh_tw": "繁體中文",
-        "vi": "Vietnamese",
-        "nl": "Dutch",
-        "de": "German",
-        "fr": "French",
-        "pt": "Portuguese",
-        "ru": "Russian",
-        "tr": "Turkish",
-        "bg": "Bulgarian",
-        "es": "Spanish"
+        "vi": "Vietnamese"
     },
     "quit_cursor": {
         "start": "Start Quitting Cursor",
@@ -467,9 +457,9 @@
         "reset_log_6": "If available, use a VPN to change your IP address",
         "reset_log_7": "Clear your browser cookies and cache before visiting Cursor AI's website",
         "reset_log_8": "If issues persist, try installing Cursor AI in a different location",
-        "reset_log_9": "If you encounter any issues, go to Github Issue Tracker and create an issue at https://github.com/hovanhoa/mino-vip/issues",
+        "reset_log_9": "If you encounter any issues, go to Github Issue Tracker and create an issue at https://github.com/dienlanhvietnam-lang/dmctn-mimo/issues",
         "unexpected_error": "An unexpected error occurred: {error}",
-        "report_issue": "Please report this issue to Github Issue Tracker at https://github.com/hovanhoa/mino-vip/issues",
+        "report_issue": "Please report this issue to Github Issue Tracker at https://github.com/dienlanhvietnam-lang/dmctn-mimo/issues",
         "keyboard_interrupt": "Process interrupted by user. Exiting...",
         "return_to_main_menu": "Returning to main menu...",
         "process_interrupted": "Process interrupted. Exiting...",
@@ -830,13 +820,13 @@
         "auto_config": "MiMo Auto config applied: {path}",
         "done": "MiMo reset complete."
     },
-    "vip": {
-        "title": "Activate VIP Account",
-        "membership_activated": "VIP/Pro membership activated locally",
-        "workbench_patched": "VIP UI patched",
-        "no_ui_changes": "VIP UI patterns already applied or not found for this Cursor version",
+    "pro": {
+        "title": "Activate Pro Account",
+        "membership_activated": "Pro membership activated locally",
+        "workbench_patched": "Pro UI patched",
+        "no_ui_changes": "Pro UI patterns already applied or not found for this Cursor version",
         "file_locked": "File is locked while Cursor is running. Restart Cursor after patching.",
-        "patch_skipped": "Skipped VIP UI patch: {error}",
+        "patch_skipped": "Skipped Pro UI patch: {error}",
         "patches_applied": "Applied {count} anti-revert membership patches",
         "reload_hint": "Reload Cursor required: Ctrl+Shift+P -> Developer: Reload Window (patches apply after reload)",
         "sync_blocked": "Blocked periodic membership/token sync to server"

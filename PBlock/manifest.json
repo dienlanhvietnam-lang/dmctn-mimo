@@ -2,8 +2,8 @@
   "name": "PBlock",
   "version": "0.1",
   "manifest_version": 3,
-  "author": "hovanhoa",
-  "url": "https://github.com/hovanhoa/PBlock",
+  "author": "dienlanhvietnam-lang",
+  "url": "https://github.com/dienlanhvietnam-lang",
   "description": "Just a simple blocker.",
   "action": {
     "default_icon": "enabled48.png"

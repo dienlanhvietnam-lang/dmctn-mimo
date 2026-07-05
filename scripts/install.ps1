@@ -43,7 +43,7 @@ function Write-Styled {
 # Get version number function
 function Get-LatestVersion {
     try {
-        $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/hovanhoa/mino-vip/releases/latest"
+        $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/dienlanhvietnam-lang/dmctn-mimo/releases/latest"
         return @{
             Version = $latestRelease.tag_name.TrimStart('v')
             Assets = $latestRelease.assets
@@ -59,14 +59,14 @@ Write-Host $Logo -ForegroundColor $Theme.Primary
 $releaseInfo = Get-LatestVersion
 $version = $releaseInfo.Version
 Write-Host "Version $version" -ForegroundColor $Theme.Info
-Write-Host "Created by hovanhoa`n" -ForegroundColor $Theme.Info
+Write-Host "Created by DMCTN`n" -ForegroundColor $Theme.Info
 
 # Set TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # Main installation function
-function Install-MiNoVIP {
-    Write-Styled "Start downloading MiNo VIP" -Color $Theme.Primary -Prefix "Download"
+function Install-DmctnMimo {
+    Write-Styled "Start downloading MiMo FREE" -Color $Theme.Primary -Prefix "Download"
     
     try {
         # Get latest version
@@ -76,9 +76,9 @@ function Install-MiNoVIP {
         Write-Styled "Found latest version: $version" -Color $Theme.Success -Prefix "Version"
         
         # Find corresponding resources
-        $asset = $releaseInfo.Assets | Where-Object { $_.name -eq "MiNoVIP_${version}_windows.exe" }
+        $asset = $releaseInfo.Assets | Where-Object { $_.name -eq "DmctnMimo_${version}_windows.exe" }
         if (!$asset) {
-            Write-Styled "File not found: MiNoVIP_${version}_windows.exe" -Color $Theme.Error -Prefix "Error"
+            Write-Styled "File not found: DmctnMimo_${version}_windows.exe" -Color $Theme.Error -Prefix "Error"
             Write-Styled "Available files:" -Color $Theme.Warning -Prefix "Info"
             $releaseInfo.Assets | ForEach-Object {
                 Write-Styled "- $($_.name)" -Color $Theme.Info
@@ -88,7 +88,7 @@ function Install-MiNoVIP {
         
         # Check if Downloads folder already exists for the corresponding version
         $DownloadsPath = [Environment]::GetFolderPath("UserProfile") + "\Downloads"
-        $downloadPath = Join-Path $DownloadsPath "MiNoVIP_${version}_windows.exe"
+        $downloadPath = Join-Path $DownloadsPath "DmctnMimo_${version}_windows.exe"
         
         if (Test-Path $downloadPath) {
             Write-Styled "Found existing installation file" -Color $Theme.Success -Prefix "Found"
@@ -203,7 +203,7 @@ function Install-MiNoVIP {
 
 # Execute installation
 try {
-    Install-MiNoVIP
+    Install-DmctnMimo
 }
 catch {
     Write-Styled "Download failed" -Color $Theme.Error -Prefix "Error"

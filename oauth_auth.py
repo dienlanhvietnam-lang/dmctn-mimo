@@ -693,10 +693,10 @@ def main(auth_type, translator=None):
         ):
             print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {translator.get('oauth.auth_update_success') if translator else 'Auth update success'}{Style.RESET_ALL}")
             try:
-                from cursor_membership import patch_workbench_vip
-                patch_workbench_vip(translator)
+                from cursor_membership import patch_workbench_pro
+                patch_workbench_pro(translator)
             except Exception as e:
-                print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('vip.patch_skipped', error=str(e)) if translator else f'VIP UI patch skipped: {e}'}{Style.RESET_ALL}")
+                print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('pro.patch_skipped', error=str(e)) if translator else f'Pro UI patch skipped: {e}'}{Style.RESET_ALL}")
             # Close the browser after successful authentication
             if handler.browser:
                 handler.browser.quit()

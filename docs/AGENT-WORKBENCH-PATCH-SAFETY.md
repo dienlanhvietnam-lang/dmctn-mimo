@@ -2,7 +2,7 @@
 
 > **Mục đích:** Ghi lại sự cố ngày 2026-07-05 để agent làm việc trong repo này **không tái phạm** patch phá `workbench.desktop.main.js`.
 >
-> **Đọc file này trước** khi sửa `workbench_patches.py`, chạy VIP activate, `apply_all_patches.py`, hoặc `loop_fix.bat`.
+> **Đọc file này trước** khi sửa `workbench_patches.py`, chạy Pro activate, `apply_all_patches.py`, hoặc `loop_fix.bat`.
 
 ---
 
@@ -16,7 +16,7 @@
 | **File bị hỏng** | `{cursor_path}\out\vs\workbench\workbench.desktop.main.js` |
 | **Nguyên nhân** | Patch `getTeams` dùng `return[];/*` — mở block comment `/*` trong bundle minified |
 | **Hậu quả** | `SyntaxError: Unexpected token '{'` → workbench không load |
-| **Khôi phục** | Copy từ `workbench.desktop.main.js.vip.*.bak` (bản trước patch) + sửa patch trong repo |
+| **Khôi phục** | Copy từ `workbench.desktop.main.js.pro.*.bak` (bản trước patch) + sửa patch trong repo |
 
 ---
 
@@ -75,7 +75,7 @@ node --check "E:\cursor31\cursor\resources\app\out\vs\workbench\workbench.deskto
 
 ### 3. Luôn backup trước khi ghi workbench
 
-Repo đã có logic backup trong `cursor_membership.py` (`*.vip.{timestamp}.bak`). Agent **không được** ghi đè workbench nếu:
+Repo đã có logic backup trong `cursor_membership.py` (`*.pro.{timestamp}.bak`). Agent **không được** ghi đè workbench nếu:
 
 - Chưa có backup mới, hoặc
 - `node --check` chưa pass trên nội dung sẽ ghi.
@@ -103,7 +103,7 @@ Khi thêm patch mới trong nhóm này: test mở Cursor + đăng nhập + mở 
 `cursor_membership.py` ghi workbench khi Cursor đang chạy có thể fail (file lock) hoặc Cursor giữ bản hỏng trong RAM.
 
 - Patch/restore: **đóng hết `Cursor.exe`** trước.
-- `MINO_VIP_KEEP_RUNNING=1` trong `start.bat` / `loop_fix.bat` — biết rủi ro file lock.
+- `DMCTN_MIMO_KEEP_RUNNING=1` trong `start.bat` / `loop_fix.bat` — biết rủi ro file lock.
 
 ---
 
@@ -115,7 +115,7 @@ Khi thêm patch mới trong nhóm này: test mở Cursor + đăng nhập + mở 
 [ ] python scripts/verify_antirevert.py
 [ ] python scripts/verify_sync_block.py
 [ ] node --check <workbench.desktop.main.js>  ← BẮT BUỘC
-[ ] Có file backup *.bak / *.vip.*.bak mới
+[ ] Có file backup *.bak / *.pro.*.bak mới
 [ ] Ghi rõ phiên bản Cursor (vd. 3.9.16 tại E:\cursor31\cursor)
 ```
 
@@ -141,7 +141,7 @@ Khi thêm patch mới trong nhóm này: test mở Cursor + đăng nhập + mở 
    ```
 3. Nếu restore script không tìm được bản sạch, copy tay backup gần nhất **không chứa** patch sync:
    ```
-   workbench.desktop.main.js.vip.20260705_032703.bak
+   workbench.desktop.main.js.pro.20260705_032703.bak
    → workbench.desktop.main.js
    ```
 4. Xác nhận:
@@ -154,7 +154,7 @@ Khi thêm patch mới trong nhóm này: test mở Cursor + đăng nhập + mở 
 
 | File | Ý nghĩa |
 |------|---------|
-| `*.vip.{timestamp}.bak` | Backup **trước** lần patch VIP (thường sạch nhất) |
+| `*.pro.{timestamp}.bak` | Backup **trước** lần patch Pro (thường sạch nhất) |
 | `*.backup.{timestamp}` / `*.cfv.*.bak` | Có thể là bản **đã patch** — không dùng restore nếu cùng size/nội dung với bản hỏng |
 | `*.broken.{timestamp}.bak` | Do `restore_workbench.py` lưu khi sửa |
 
@@ -182,7 +182,7 @@ Config đường dẫn Cursor: `%USERPROFILE%\Documents\.mino-vip\config.ini`
 
 1. **`workbench_patches.py`:** `getTeams` đổi từ `return[];/*` → `return[];const n=await this.dashboardClient()`.
 2. **`scripts/verify_sync_block.py`:** Check `getTeams noop` đổi từ `return[];/*` → `return[];`.
-3. **Workbench tại `E:\cursor31\cursor`:** Đã restore từ `.vip.20260705_032703.bak`, `node --check` pass.
+3. **Workbench tại `E:\cursor31\cursor`:** Đã restore từ `.pro.20260705_032703.bak`, `node --check` pass.
 
 ---
 

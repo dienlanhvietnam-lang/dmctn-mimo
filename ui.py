@@ -1,4 +1,4 @@
-"""Console UI theme for MiMo VIP: rounded panels, section badges, status icons.
+"""Console UI theme for MiMo FREE: rounded panels, section badges, status icons.
 
 Renders the dashboard look (header + numbered panels + prompt bar) using
 colorama's 16-color palette so it works in both Windows Terminal and legacy

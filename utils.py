@@ -8,7 +8,7 @@ import configparser
 from branding import resolve_config_dir, env_flag
 
 def get_app_config_dir():
-    """Return MiMo VIP config directory under Documents."""
+    """Return MiMo FREE config directory under Documents."""
     return resolve_config_dir(get_user_documents_path())
 
 
@@ -168,7 +168,7 @@ def get_cursor_workbench_path(app_path=None):
     return main if os.path.isfile(main) else None
 
 def should_keep_cursor_running():
-    return env_flag("KEEP_RUNNING", legacy_env="CURSOR_FREE_VIP_KEEP_RUNNING")
+    return env_flag("KEEP_RUNNING", legacy_env="DMCTN_MIMO_KEEP_RUNNING")
 
 def get_random_wait_time(config, timing_key):
     """Get random wait time based on configuration timing settings

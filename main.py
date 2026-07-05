@@ -91,7 +91,7 @@ class Translator:
     
     def detect_system_language(self):
         """Detect system language and return corresponding language code"""
-        env_lang = env_get("LANG", legacy_env="CURSOR_FREE_VIP_LANG").strip().lower()
+        env_lang = env_get("LANG", legacy_env="DMCTN_MIMO_LANG").strip().lower()
         if env_lang:
             return env_lang
 
@@ -122,13 +122,8 @@ class Translator:
             
             # Map language ID to our language codes
             language_map = {
-                0x0409: 'en',      # English
-                0x0404: 'zh_tw',   # Traditional Chinese
-                0x0804: 'zh_cn',   # Simplified Chinese
-                0x0422: 'vi',      # Vietnamese
-                0x0419: 'ru',      # Russian
-                0x0415: 'tr',      # Turkish
-                0x0402: 'bg',      # Bulgarian
+                0x0409: 'en',
+                0x0422: 'vi',
             }
             
             return language_map.get(layout_id, 'en')
@@ -146,50 +141,14 @@ class Translator:
             system_locale = system_locale.lower()
             
             # Map locale to our language codes
-            if system_locale.startswith('zh_tw') or system_locale.startswith('zh_hk'):
-                return 'zh_tw'
-            elif system_locale.startswith('zh_cn'):
-                return 'zh_cn'
+            if system_locale.startswith('vi'):
+                return 'vi'
             elif system_locale.startswith('en'):
                 return 'en'
-            elif system_locale.startswith('vi'):
-                return 'vi'
-            elif system_locale.startswith('nl'):
-                return 'nl'
-            elif system_locale.startswith('de'):
-                return 'de'
-            elif system_locale.startswith('fr'):
-                return 'fr'
-            elif system_locale.startswith('pt'):
-                return 'pt'
-            elif system_locale.startswith('ru'):
-                return 'ru'
-            elif system_locale.startswith('tr'):
-                return 'tr'
-            elif system_locale.startswith('bg'):
-                return 'bg'
-            # Try to get language from LANG environment variable as fallback
+
             env_lang = os.getenv('LANG', '').lower()
-            if 'tw' in env_lang or 'hk' in env_lang:
-                return 'zh_tw'
-            elif 'cn' in env_lang:
-                return 'zh_cn'
-            elif 'vi' in env_lang:
+            if 'vi' in env_lang:
                 return 'vi'
-            elif 'nl' in env_lang:
-                return 'nl'
-            elif 'de' in env_lang:
-                return 'de'
-            elif 'fr' in env_lang:
-                return 'fr'
-            elif 'pt' in env_lang:
-                return 'pt'
-            elif 'ru' in env_lang:
-                return 'ru'
-            elif 'tr' in env_lang:
-                return 'tr'
-            elif 'bg' in env_lang:
-                return 'bg'
 
             return 'en'
         except:
@@ -419,8 +378,7 @@ def select_language():
             lang_code = languages[int(choice)]
             if translator.set_language(lang_code):
                 save_user_language(lang_code)
-                os.environ["MIMO_VIP_LANG"] = lang_code
-                os.environ["MINO_VIP_LANG"] = lang_code
+                os.environ["DMCTN_MIMO_LANG"] = lang_code
             return True
         else:
             print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('menu.invalid_choice')}{Style.RESET_ALL}")
@@ -435,7 +393,7 @@ def check_latest_version():
         # Get latest version from GitHub API with timeout and proper headers
         headers = {
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'MiMoVIP-Updater'
+            'User-Agent': 'DMCTN-MiMo-Updater'
         }
         response = requests.get(
             f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
@@ -591,7 +549,7 @@ def main():
         config_lang = config.get('Utils', 'language').strip().lower()
         if config_lang:
             translator.set_language(config_lang)
-    env_lang = env_get("LANG", legacy_env="CURSOR_FREE_VIP_LANG")
+    env_lang = env_get("LANG", legacy_env="DMCTN_MIMO_LANG")
     if env_lang:
         translator.set_language(env_lang)
     print_logo(translator)

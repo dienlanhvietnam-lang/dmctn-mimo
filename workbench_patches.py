@@ -4,7 +4,7 @@ from branding import APP_NAME, GITHUB_URL
 
 
 def get_workbench_replacements():
-    """Return ordered old->new string replacements for VIP/Pro UI, limits, and server sync block."""
+    """Return ordered old->new string replacements for Pro UI, limits, and server sync block."""
     return {
         # ===== Cursor 3.11+ (cs.* enums, Hgt/KAc storage keys) =====
         # --- Anti-revert membership ---

@@ -22,12 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
-os.environ.setdefault("MIMO_VIP_LANG", "vi")
-os.environ.setdefault("MIMO_VIP_KEEP_RUNNING", "1")
-os.environ.setdefault("MINO_VIP_LANG", os.environ["MIMO_VIP_LANG"])
-os.environ.setdefault("MINO_VIP_KEEP_RUNNING", os.environ["MIMO_VIP_KEEP_RUNNING"])
-os.environ.setdefault("CURSOR_FREE_VIP_LANG", os.environ["MIMO_VIP_LANG"])
-os.environ.setdefault("CURSOR_FREE_VIP_KEEP_RUNNING", os.environ["MIMO_VIP_KEEP_RUNNING"])
+os.environ.setdefault("DMCTN_MIMO_LANG", "vi")
+os.environ.setdefault("DMCTN_MIMO_KEEP_RUNNING", "1")
 
 PHASES = [
     "01_syntax",
@@ -71,9 +67,7 @@ def _nested_get(data: dict, dotted: str):
 
 
 def _quiet_run(fn):
-    os.environ["MIMO_VIP_QUIET"] = "1"
-    os.environ["MINO_VIP_QUIET"] = "1"
-    os.environ["CURSOR_FREE_VIP_QUIET"] = "1"
+    os.environ["DMCTN_MIMO_QUIET"] = "1"
     with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
         return fn()
 
@@ -116,11 +110,14 @@ class PhaseRunner:
 
     def phase_locales(self):
         errors = []
-        for path in (ROOT / "locales").glob("*.json"):
+        for path in sorted((ROOT / "locales").glob("*.json")):
             try:
                 json.load(path.open(encoding="utf-8"))
             except Exception as e:
                 errors.append(f"{path.name}:{e}")
+        locale_files = {p.name for p in (ROOT / "locales").glob("*.json")}
+        if locale_files != {"en.json", "vi.json"}:
+            errors.append(f"expected en.json+vi.json only, got {sorted(locale_files)}")
         vi = json.load((ROOT / "locales/vi.json").open(encoding="utf-8"))
         en = json.load((ROOT / "locales/en.json").open(encoding="utf-8"))
         for key in LOCALE_KEYS:
@@ -193,7 +190,7 @@ class PhaseRunner:
     def phase_branding(self):
         from branding import APP_NAME, CONFIG_DIR_NAME
 
-        ok = APP_NAME == "MiMo VIP" and CONFIG_DIR_NAME == ".mimo-vip"
+        ok = APP_NAME == "MiMo FREE" and CONFIG_DIR_NAME == ".dmctn-mimo"
         return ok, APP_NAME
 
     def phase_translator_keys(self):
