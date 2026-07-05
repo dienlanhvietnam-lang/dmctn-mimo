@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import shutil
 import re
+from branding import APP_NAME, GITHUB_URL
 
 # Get the current script directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -62,40 +63,63 @@ def center_multiline_text(text, handle_chinese=False):
 
 # original LOGO text
 LOGO_TEXT = f"""{Fore.CYAN}
-   ██████╗██╗   ██╗██████╗ ███████╗ ██████╗ ██████╗      ██████╗ ██████╗  ██████╗   
-  ██╔════╝██║   ██║██╔══██╗██╔════╝██╔═══██╗██╔══██╗     ██╔══██╗██╔══██╗██╔═══██╗  
-  ██║     ██║   ██║██████╔╝███████╗██║   ██║██████╔╝     ██████╔╝██████╔╝██║   ██║  
-  ██║     ██║   ██║██╔══██╗╚════██║██║   ██║██╔══██╗     ██╔═══╝ ██╔══██╗██║   ██║  
-  ╚██████╗╚██████╔╝██║  ██║███████║╚██████╔╝██║  ██║     ██║     ██║  ██║╚██████╔╝  
-   ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝     ╚═╝     ╚═╝  ╚═╝ ╚═════╝  
+███╗   ███╗██╗███╗   ██╗ ██████╗      ██╗   ██╗██╗██████╗ 
+████╗ ████║██║████╗  ██║██╔═══██╗     ██║   ██║██║██╔══██╗
+██╔████╔██║██║██╔██╗ ██║██║   ██║     ██║   ██║██║██████╔╝
+██║╚██╔╝██║██║██║╚██╗██║██║   ██║     ╚██╗ ██╔╝██║██╔═══╝ 
+██║ ╚═╝ ██║██║██║ ╚████║╚██████╔╝      ╚████╔╝ ██║██║     
+╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝       ╚═══╝  ╚═╝╚═╝     
 {Style.RESET_ALL}"""
 
 DESCRIPTION_TEXT = f"""{Fore.YELLOW}
-Pro Version Activator v{version}{Fore.GREEN}
+{APP_NAME} Pro Activator v{version}{Fore.GREEN}
 Author: Pin Studios (hovanhoa)"""
 
-CONTRIBUTORS_TEXT = f"""{Fore.BLUE}
-Contributors:
-BasaiCorp  aliensb  handwerk2016  Nigel1992
-UntaDotMy  RenjiYuusei  imbajin  ahmed98Osama
-bingoohuang  mALIk-sHAHId  MFaiqKhan  httpmerak
-muhammedfurkan plamkatawe Lucaszmv
-"""
 OTHER_INFO_TEXT = f"""{Fore.YELLOW}
-Github: https://github.com/hovanhoa/cursor-free-vip{Fore.RED}
-Press 8 to change language | 按下 8 键切换语言{Style.RESET_ALL}"""
+Github: {GITHUB_URL}{Fore.RED}
+Press 1 to change language | 按下 1 键切换语言{Style.RESET_ALL}"""
 
 # center display LOGO and DESCRIPTION
 CURSOR_LOGO = center_multiline_text(LOGO_TEXT, handle_chinese=False)
 CURSOR_DESCRIPTION = center_multiline_text(DESCRIPTION_TEXT, handle_chinese=False)
-CURSOR_CONTRIBUTORS = center_multiline_text(CONTRIBUTORS_TEXT, handle_chinese=False)
 CURSOR_OTHER_INFO = center_multiline_text(OTHER_INFO_TEXT, handle_chinese=True)
 
-def print_logo():
-    print(CURSOR_LOGO)
-    print(CURSOR_DESCRIPTION)
-    # print(CURSOR_CONTRIBUTORS)
-    print(CURSOR_OTHER_INFO)
+# Hexagon-style brand mark (3 rows, visible width 7)
+_MARK = ["╭─────╮", f"│  {Fore.LIGHTCYAN_EX}M{Fore.CYAN}  │", "╰─────╯"]
+
+
+def print_logo(translator=None):
+    """Render the dashboard header panel (brand mark + title + links)."""
+    import ui
+
+    def _t(key: str, fallback: str) -> str:
+        if not translator:
+            return fallback
+        value = translator.get(key)
+        return value if value and value != key else fallback
+
+    dash = _t("header.dashboard", "Bảng điều khiển")
+    product = _t("header.product_line", "MiMo FREE v0.1 • DMCTN")
+    tagline = _t("header.tagline", "Free MIMO 07/26")
+    lang_hint = _t("header.lang_hint", "Press 1 to change language")
+
+    title = f"{ui.TITLE}{dash} {APP_NAME}{ui.RESET}"
+    if "•" in product:
+        left, right = product.split("•", 1)
+        subtitle = f"{ui.DIM}{left.strip()}{ui.RESET}  •  {ui.OK}{right.strip()}{ui.RESET}"
+    else:
+        subtitle = f"{ui.DIM}{product}{ui.RESET}"
+    footer = f"{ui.ACCENT}{tagline}{ui.RESET}    {ui.DIM}{lang_hint}{ui.RESET}"
+
+    marks = [f"{ui.BORDER}{m}{ui.RESET}" for m in _MARK]
+    lines = [
+        f"{marks[0]}   {title}",
+        f"{marks[1]}   {subtitle}",
+        f"{marks[2]}   {footer}",
+    ]
+    print()
+    ui.panel(lines)
+
 
 if __name__ == "__main__":
     print_logo()

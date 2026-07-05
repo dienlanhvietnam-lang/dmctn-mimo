@@ -2,26 +2,28 @@ import os
 import sys
 import configparser
 from colorama import Fore, Style
-from utils import get_user_documents_path, get_default_chrome_path, get_linux_cursor_path, resolve_cursor_app_path, get_cursor_paths_section
+from branding import env_flag
+from utils import get_user_documents_path, get_default_chrome_path, get_linux_cursor_path, resolve_cursor_app_path, get_cursor_paths_section, get_app_config_dir
+import icons as _icons
 import shutil
 import datetime
 
 EMOJI = {
-    "INFO": "ℹ️",
-    "WARNING": "⚠️",
-    "ERROR": "❌",
-    "SUCCESS": "✅",
-    "ADMIN": "🔒",
-    "ARROW": "➡️",
-    "USER": "👤",
-    "KEY": "🔑",
-    "SETTINGS": "⚙️"
+    "INFO": _icons.INFO,
+    "WARNING": _icons.WARNING,
+    "ERROR": _icons.ERROR,
+    "SUCCESS": _icons.SUCCESS,
+    "ADMIN": _icons.ADMIN,
+    "ARROW": _icons.ARROW,
+    "USER": _icons.INFO,
+    "KEY": _icons.OAUTH,
+    "SETTINGS": _icons.MENU,
 }
 
 def setup_config(translator=None):
     """Setup configuration file and return config object"""
     try:
-        config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+        config_dir = get_app_config_dir()
         config_file = os.path.join(config_dir, "config.ini")
         os.makedirs(config_dir, exist_ok=True)
         
@@ -30,7 +32,9 @@ def setup_config(translator=None):
         # Default configuration
         default_config = {
             'Chrome': {
-                'chromepath': get_default_chrome_path()
+                'chromepath': get_default_chrome_path(),
+                'profile_directory': '',
+                'profile_display_name': '',
             },
             'Turnstile': {
                 'handle_turnstile_time': '2',
@@ -55,7 +59,7 @@ def setup_config(translator=None):
             'Utils': {
                 'enabled_update_check': 'True',
                 'enabled_force_update': 'False',
-                'enabled_account_info': 'True',
+                'enabled_account_info': 'False',
                 'language': 'vi'
             }
         }
@@ -257,33 +261,6 @@ def _sync_cursor_install_paths(config, config_file):
                 config.write(f)
     except Exception:
         pass
-    
-def print_config(config, translator=None):
-    """Print configuration in a readable format"""
-    if not config:
-        print(f"{Fore.YELLOW}{EMOJI['WARNING']} {translator.get('config.config_not_available') if translator else 'Configuration not available'}{Style.RESET_ALL}")
-        return
-        
-    print(f"\n{Fore.CYAN}{EMOJI['INFO']} {translator.get('config.configuration') if translator else 'Configuration'}:{Style.RESET_ALL}")
-    print(f"\n{Fore.CYAN}{'─' * 70}{Style.RESET_ALL}")
-    for section in config.sections():
-        print(f"{Fore.GREEN}[{section}]{Style.RESET_ALL}")
-        for key, value in config.items(section):
-            # 对布尔值进行特殊处理，使其显示为彩色
-            if value.lower() in ('true', 'yes', 'on', '1'):
-                value_display = f"{Fore.GREEN}{translator.get('config.enabled') if translator else 'Enabled'}{Style.RESET_ALL}"
-            elif value.lower() in ('false', 'no', 'off', '0'):
-                value_display = f"{Fore.RED}{translator.get('config.disabled') if translator else 'Disabled'}{Style.RESET_ALL}"
-            else:
-                value_display = value
-                
-            print(f"  {key} = {value_display}")
-    
-    print(f"\n{Fore.CYAN}{'─' * 70}{Style.RESET_ALL}")
-    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip", "config.ini")
-    print(f"{Fore.CYAN}{EMOJI['INFO']} {translator.get('config.config_directory') if translator else 'Config Directory'}: {config_dir}{Style.RESET_ALL}")
-
-    print()  
 
 def force_update_config(translator=None):
     """
@@ -294,7 +271,7 @@ def force_update_config(translator=None):
         ConfigParser instance or None if failed
     """
     try:
-        config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+        config_dir = get_app_config_dir()
         config_file = os.path.join(config_dir, "config.ini")
         current_time = datetime.datetime.now()
 
@@ -324,8 +301,8 @@ def force_update_config(translator=None):
                     if translator:
                         print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('config.backup_failed', error=str(e)) if translator else f'Failed to backup config: {str(e)}'}{Style.RESET_ALL}")
             else:
-                if translator:
-                    print(f"\n{Fore.CYAN}{EMOJI['INFO']} {translator.get('config.config_force_update_disabled', fallback='Config file force update disabled by configuration. Keeping existing config file.') if translator else 'Config file force update disabled by configuration. Keeping existing config file.'}{Style.RESET_ALL}")
+                if translator and not env_flag("QUIET", legacy_env="CURSOR_FREE_VIP_QUIET"):
+                    print(f"\n{Fore.CYAN}{EMOJI['INFO']} {translator.get('config.config_force_update_disabled') if translator else 'Config file force update disabled by configuration. Keeping existing config file.'}{Style.RESET_ALL}")
 
         # Generate a new (or updated) configuration if needed
         return setup_config(translator)
@@ -337,4 +314,23 @@ def force_update_config(translator=None):
 
 def get_config(translator=None):
     """Get existing config or create new one"""
-    return setup_config(translator) 
+    return setup_config(translator)
+
+
+def save_user_language(lang_code: str) -> bool:
+    """Persist UI language choice to config.ini (Utils.language)."""
+    try:
+        config_dir = get_app_config_dir()
+        os.makedirs(config_dir, exist_ok=True)
+        config_file = os.path.join(config_dir, "config.ini")
+        config = configparser.ConfigParser()
+        if os.path.isfile(config_file):
+            config.read(config_file, encoding="utf-8")
+        if not config.has_section("Utils"):
+            config.add_section("Utils")
+        config.set("Utils", "language", lang_code.strip().lower())
+        with open(config_file, "w", encoding="utf-8") as f:
+            config.write(f)
+        return True
+    except OSError:
+        return False

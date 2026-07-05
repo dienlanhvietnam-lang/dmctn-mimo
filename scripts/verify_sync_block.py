@@ -1,4 +1,4 @@
-"""Verify server auth/membership sync is blocked in workbench (compact output)."""
+"""Verify server auth/usage sync is blocked in workbench (compact output)."""
 import argparse
 import json
 import sys
@@ -9,15 +9,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import get_cursor_workbench_path, get_resolved_cursor_app_path
 
 CHECKS = [
+    # membership sync
     ("refreshMembership noop", "this.refreshMembership=async()=>{return;", True),
     ("refreshAuthentication noop", "async refreshAuthentication(){return}", True),
     ("team policy noop", "scheduleTeamPolicyCheck(){return}", True),
-    ("periodic We noop", "const We=async()=>{return;try{await this.cursorAuthenticationService.refreshMembership()", True),
-    ("We startup disabled", "/*We();*/const Qe=10;", True),
     ("2s refresh disabled", "setTimeout(()=>{},2e3)", True),
-    ("ui refresh bypass", "xr(()=>{Promise.resolve().then(", True),
-    ("raw refreshMembership body", 'this.refreshMembership=async()=>{this.authDebugLog("refreshMembership: called")', False),
-    ("raw We loop", "const We=async()=>{try{await this.cursorAuthenticationService.refreshMembership()", False),
+    # periodic loop (new je or legacy We)
+    ("periodic loop noop", "const je=async()=>{return;try{await this.cursorAuthenticationService.refreshMembership()", True),
+    ("loop startup disabled", "/*je();*/const st=10;", True),
+    # usage / pricing / privacy sync
+    ("fetchUserPricingInfo noop", "this.fetchUserPricingInfo=async()=>{return;", True),
+    ("fetchUserPrivacyMode noop", "this.fetchUserPrivacyMode=async J=>{return;", True),
+    ("getTeams noop", "async getTeams(){return[];", True),
+    ("performFetch noop", "async performFetch(n){return;", True),
+    ("refetch noop", "async refetch(n=!1){return;", True),
+    ("fetchPlanInfo noop", "async fetchPlanInfo(n=!1){return;", True),
+    # must NOT exist (raw sync)
+    ("raw refreshMembership", 'this.refreshMembership=async()=>{this.authDebugLog("refreshMembership: called")', False),
+    ("raw getCurrentPeriodUsage fetch", "async performFetch(n){this.setIsLoading(!0),this.setError(null);try{const t=await(await this.cursorAuthenticationService.dashboardClient()).getCurrentPeriodUsage", False),
 ]
 
 

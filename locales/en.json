@@ -33,7 +33,55 @@
         "bypass_version_check": "Bypass Cursor Version Check",
         "check_user_authorized": "Check User Authorized",
         "bypass_token_limit": "Bypass Token Limit",
-        "activate_vip": "Activate VIP Account"
+        "activate_vip": "Activate VIP Account",
+        "reset_mimo_machine": "Reset MiMo CLI Machine ID",
+        "totally_reset_mimo": "Totally Reset MiMo CLI",
+        "mimo_platform_login": "MiMo Platform Login (Chrome profile)",
+        "mimo_manage_accounts": "Manage MiMo Accounts"
+    },
+    "mimo_login": {
+        "title": "MiMo Platform Login",
+        "waiting_url": "Waiting for OAuth URL from MiMo CLI...",
+        "complete_browser": "Complete login in Chrome, then wait...",
+        "no_url": "Could not capture OAuth URL. Try API key fallback (option 2).",
+        "failed": "Login failed or timed out",
+        "success": "Saved slot {id} ({label})",
+        "api_key_prompt": "Paste Xiaomi API key (empty = cancel):"
+    },
+    "mimo_slots": {
+        "title": "Manage MiMo Accounts",
+        "empty": "No saved MiMo accounts"
+    },
+    "header": {
+        "dashboard": "Dashboard",
+        "lang_hint": "Press 1 to change language",
+        "product_line": "MiMo FREE v0.1 • DMCTN",
+        "tagline": "Free MIMO 07/26"
+    },
+    "dashboard": {
+        "account_summary": "MiMo account summary",
+        "action_menu": "Action menu",
+        "active_account": "Active account",
+        "mimo_uid": "MiMo UID",
+        "api_key": "API key",
+        "chrome_profile": "Chrome profile",
+        "saved_slots": "Saved slots",
+        "pro_status": "Pro status",
+        "no_active_slot": "No active slot",
+        "none": "None",
+        "slots_none": "None — use menu 5",
+        "slots_one": "1 slot",
+        "slots_many": "{count} slots",
+        "pro_authenticated": "Authenticated (Pro)",
+        "pro_slots_saved": "Slots saved — activate in menu 6",
+        "pro_not_logged_in": "Not logged in — use menu 5",
+        "hint_login": "Menu 5 = Platform login · Menu 6 = manage slots",
+        "prompt": "Enter choice [0-6], h=help, r=reload, q=quit:",
+        "help_title": "Help",
+        "help_menu5": "5 = MiMo Platform login (Chrome)",
+        "help_menu6": "6 = Manage MiMo Pro account slots",
+        "help_reload": "r = Reload dashboard",
+        "help_exit": "q / 0 = Exit"
     },
     "languages": {
         "en": "English",
@@ -417,9 +465,9 @@
         "reset_log_6": "If available, use a VPN to change your IP address",
         "reset_log_7": "Clear your browser cookies and cache before visiting Cursor AI's website",
         "reset_log_8": "If issues persist, try installing Cursor AI in a different location",
-        "reset_log_9": "If you encounter any issues, go to Github Issue Tracker and create an issue at https://github.com/hovanhoa/cursor-free-vip/issues",
+        "reset_log_9": "If you encounter any issues, go to Github Issue Tracker and create an issue at https://github.com/hovanhoa/mino-vip/issues",
         "unexpected_error": "An unexpected error occurred: {error}",
-        "report_issue": "Please report this issue to Github Issue Tracker at https://github.com/hovanhoa/cursor-free-vip/issues",
+        "report_issue": "Please report this issue to Github Issue Tracker at https://github.com/hovanhoa/mino-vip/issues",
         "keyboard_interrupt": "Process interrupted by user. Exiting...",
         "return_to_main_menu": "Returning to main menu...",
         "process_interrupted": "Process interrupted. Exiting...",
@@ -638,7 +686,13 @@
         "error_loading": "Error loading Chrome profiles: {error}",
         "profile_selected": "Selected profile: {profile}",
         "invalid_selection": "Invalid selection. Please try again",
-        "warning_chrome_close": "Warning: This will close all running Chrome processes"
+        "warning_chrome_close": "Warning: This will close all running Chrome processes",
+        "current_saved": "Current default profile: {profile}",
+        "default_marker": "default",
+        "saved_default": "Default profile saved: {profile}",
+        "use_saved_prompt": "Use saved Chrome profile {profile}? (Y/n): ",
+        "using_saved": "Using saved profile: {profile}",
+        "save_failed": "Could not save profile: {error}"
     },
     "account_delete": {
         "title": "Cursor Google Account Deletion Tool",
@@ -736,6 +790,35 @@
         "title": "Bypass Token Limit Tool",
         "description": "This tool modifies the workbench.desktop.main.js file to bypass the token limit",
         "press_enter": "Press Enter to continue..."
+    },
+    "mimo_total": {
+        "title": "Totally Reset MiMo CLI",
+        "warning": "Deletes mimocode.db, memory, sessions, and auth. Restore only from backup.",
+        "backup": "Backup: {path}",
+        "removed": "Removed: {path}",
+        "identity": "Applying new machine identity + registry...",
+        "quit_mimo": "Closing {count} MiMo process(es)...",
+        "remove_failed": "Could not remove: {path}",
+        "partial": "Some paths are locked (close MiMo and retry or delete manually):",
+        "done": "Totally reset complete ({count} items removed). Run mimo/start.bat again."
+    },
+    "mimo_reset": {
+        "title": "Reset MiMo Machine ID",
+        "start": "Resetting MiMo machine identity...",
+        "backup": "Backup: {path}",
+        "auth_cleared": "Removed auth.json for fresh anonymous session",
+        "registry": "Updating Windows MachineGuid + SQMClient MachineId...",
+        "admin_required": "Need Administrator for registry. Re-run start.bat as Admin.",
+        "partial_ok": "MiMo local IDs updated; registry skipped.",
+        "bootstrap_ok": "MiMo Auto bootstrap OK (anonymous channel ready)",
+        "bootstrap_fail": "MiMo Auto bootstrap check failed: {error}",
+        "next_steps_title": "Next steps in MiMo CLI:",
+        "next_auto": "Press Tab → switch to MiMo Auto (free, no API key)",
+        "next_pro": "MiMo-V2.5-Pro needs Xiaomi API key → run: mimo providers login",
+        "next_restart": "Restart: mimo/start.bat",
+        "401_hint": "401 Invalid API Key = using Pro model without auth.json after reset",
+        "auto_config": "MiMo Auto config applied: {path}",
+        "done": "MiMo reset complete."
     },
     "vip": {
         "title": "Activate VIP Account",

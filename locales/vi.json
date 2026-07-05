@@ -21,7 +21,63 @@
         "outdate": "Quá cũ",
         "temp_github_register": "Đăng ký GitHub tạm thời",
         "bypass_token_limit": "Bypass Token Limit",
-        "activate_vip": "Kích Hoạt Tài Khoản VIP"
+        "activate_vip": "Kích Hoạt Tài Khoản VIP",
+        "reset_mimo_machine": "Đặt Lại ID Máy MiMo CLI",
+        "totally_reset_mimo": "Đặt Lại Hoàn Toàn MiMo CLI",
+        "mimo_platform_login": "Đăng Nhập MiMo Platform (Chrome profile)",
+        "mimo_manage_accounts": "Quản Lý Account MiMo"
+    },
+    "mimo_login": {
+        "title": "Đăng Nhập MiMo Platform",
+        "waiting_url": "Đang chờ OAuth URL từ MiMo CLI...",
+        "complete_browser": "Hoàn tất đăng nhập trên Chrome, rồi đợi...",
+        "no_url": "Không bắt được OAuth URL. Thử dán API key (tùy chọn 2).",
+        "failed": "Đăng nhập thất bại hoặc hết thời gian",
+        "success": "Đã lưu slot {id} ({label})",
+        "api_key_prompt": "Dán Xiaomi API key (trống = hủy):"
+    },
+    "mimo_slots": {
+        "title": "Quản Lý Account MiMo",
+        "empty": "Chưa có account MiMo đã lưu"
+    },
+    "header": {
+        "dashboard": "Bảng điều khiển",
+        "lang_hint": "Nhấn 1 để đổi ngôn ngữ",
+        "product_line": "MiMo FREE v0.1 • DMCTN",
+        "tagline": "Free MIMO 07/26"
+    },
+    "dashboard": {
+        "account_summary": "Tóm tắt tài khoản MiMo",
+        "action_menu": "Menu thao tác",
+        "active_account": "Tài khoản đang dùng",
+        "mimo_uid": "UID MiMo",
+        "api_key": "Khóa API",
+        "chrome_profile": "Hồ sơ Chrome",
+        "saved_slots": "Slot đã lưu",
+        "pro_status": "Trạng thái Pro",
+        "no_active_slot": "Chưa kích hoạt slot",
+        "none": "Chưa có",
+        "slots_none": "Chưa có — menu 5",
+        "slots_one": "1 slot",
+        "slots_many": "{count} slot",
+        "pro_authenticated": "Đã xác thực (Pro)",
+        "pro_slots_saved": "Có slot — kích hoạt menu 6",
+        "pro_not_logged_in": "Chưa đăng nhập — menu 5",
+        "hint_login": "Menu 5 = đăng nhập Platform · Menu 6 = quản lý slot",
+        "prompt": "Nhập lựa chọn [0-6], h=trợ giúp, r=tải lại, q=thoát:",
+        "help_title": "Trợ giúp",
+        "help_menu5": "5 = Đăng nhập MiMo Platform (Chrome)",
+        "help_menu6": "6 = Quản lý slot account MiMo Pro",
+        "help_reload": "r = Tải lại bảng điều khiển",
+        "help_exit": "q / 0 = Thoát"
+    },
+    "config": {
+        "config_force_update_disabled": "Tắt cập nhật cấu hình cưỡng bức — giữ file config hiện tại",
+        "config_force_update_enabled": "Bật cập nhật cấu hình cưỡng bức — đang tạo config mới",
+        "config_removed": "Đã xóa file config để cập nhật cưỡng bức",
+        "backup_created": "Đã tạo bản sao lưu: {path}",
+        "backup_failed": "Không tạo được bản sao lưu: {error}",
+        "force_update_failed": "Cập nhật cấu hình thất bại: {error}"
     },
     "languages": {
         "en": "Tiếng Anh",
@@ -297,6 +353,35 @@
         "development_version": "Phiên Bản Phát Triển {current} > {latest}",
         "changelog_title": "Nhật ký thay đổi"
     },
+    "mimo_total": {
+        "title": "Đặt Lại Hoàn Toàn MiMo CLI",
+        "warning": "Xóa mimocode.db, memory, session, auth. Chỉ khôi phục được từ backup.",
+        "backup": "Sao lưu: {path}",
+        "removed": "Đã xóa: {path}",
+        "identity": "Đang áp dụng ID máy mới + registry...",
+        "quit_mimo": "Đang đóng {count} tiến trình MiMo...",
+        "remove_failed": "Không xóa được: {path}",
+        "partial": "Một số thư mục bị khóa (đóng MiMo rồi xóa tay hoặc chạy lại):",
+        "done": "Hoàn tất reset toàn bộ ({count} mục). Chạy lại mimo/start.bat."
+    },
+    "mimo_reset": {
+        "title": "Đặt Lại ID Máy MiMo",
+        "start": "Đang đặt lại định danh máy MiMo...",
+        "backup": "Sao lưu: {path}",
+        "auth_cleared": "Đã xóa auth.json để dùng kênh anonymous mới",
+        "registry": "Đang cập nhật Windows MachineGuid + SQMClient MachineId...",
+        "admin_required": "Cần quyền Administrator cho registry. Chạy start.bat bằng Run as Admin.",
+        "partial_ok": "Đã cập nhật ID local MiMo; bỏ qua registry.",
+        "bootstrap_ok": "MiMo Auto bootstrap OK (kênh anonymous sẵn sàng)",
+        "bootstrap_fail": "Kiểm tra MiMo Auto thất bại: {error}",
+        "next_steps_title": "Bước tiếp theo trong MiMo CLI:",
+        "next_auto": "Nhấn Tab → chuyển sang MiMo Auto (miễn phí, không cần API key)",
+        "next_pro": "MiMo-V2.5-Pro cần Xiaomi API key → chạy: mimo providers login",
+        "next_restart": "Khởi động lại: mimo/start.bat",
+        "401_hint": "401 Invalid API Key = đang dùng model Pro nhưng auth.json đã bị xóa sau reset",
+        "auto_config": "Đã cấu hình MiMo Auto: {path}",
+        "done": "Hoàn tất reset MiMo."
+    },
     "vip": {
         "title": "Kích Hoạt Tài Khoản VIP",
         "membership_activated": "Đã kích hoạt VIP/Pro cục bộ",
@@ -385,9 +470,9 @@
         "reset_log_6": "Nếu có thể, sử dụng VPN để thay đổi địa chỉ IP",
         "reset_log_7": "Xóa cookie và bộ nhớ cache trình duyệt trước khi truy cập trang web Cursor AI",
         "reset_log_8": "Nếu vẫn gặp sự cố, hãy thử cài Cursor AI vào vị trí khác",
-        "reset_log_9": "Nếu gặp bất kỳ vấn đề nào, hãy truy cập Github Issue Tracker và tạo issue tại https://github.com/hovanhoa/cursor-free-vip/issues",
+        "reset_log_9": "Nếu gặp bất kỳ vấn đề nào, hãy truy cập Github Issue Tracker và tạo issue tại https://github.com/hovanhoa/mino-vip/issues",
         "unexpected_error": "Đã xảy ra lỗi không mong muốn: {error}",
-        "report_issue": "Vui lòng báo cáo sự cố này tại Github Issue Tracker: https://github.com/hovanhoa/cursor-free-vip/issues",
+        "report_issue": "Vui lòng báo cáo sự cố này tại Github Issue Tracker: https://github.com/hovanhoa/mino-vip/issues",
         "keyboard_interrupt": "Quá trình bị người dùng hủy. Đang thoát...",
         "return_to_main_menu": "Trở về menu chính...",
         "process_interrupted": "Quá trình bị gián đoạn. Đang thoát...",
@@ -412,6 +497,12 @@
         "error_loading": "Lỗi khi tải hồ sơ Chrome: {error}",
         "profile_selected": "Đã chọn hồ sơ: {profile}",
         "invalid_selection": "Lựa chọn không hợp lệ. Vui lòng thử lại",
-        "warning_chrome_close": "Cảnh báo: Điều này sẽ đóng tất cả các tiến trình Chrome đang chạy"
+        "warning_chrome_close": "Cảnh báo: Điều này sẽ đóng tất cả các tiến trình Chrome đang chạy",
+        "current_saved": "Hồ sơ mặc định hiện tại: {profile}",
+        "default_marker": "mặc định",
+        "saved_default": "Đã lưu hồ sơ mặc định: {profile}",
+        "use_saved_prompt": "Dùng hồ sơ Chrome đã lưu {profile}? (Y/n): ",
+        "using_saved": "Đang dùng hồ sơ đã lưu: {profile}",
+        "save_failed": "Không thể lưu hồ sơ: {error}"
     }
 }

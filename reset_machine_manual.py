@@ -15,7 +15,7 @@ import configparser
 from new_signup import get_user_documents_path
 import traceback
 from config import get_config
-from utils import get_resolved_cursor_app_path, get_cursor_workbench_path, get_cursor_paths_section
+from utils import get_resolved_cursor_app_path, get_cursor_workbench_path, get_cursor_paths_section, get_app_config_dir
 from workbench_patches import apply_workbench_patches
 from datetime import datetime
 
@@ -39,7 +39,7 @@ def get_cursor_paths(translator=None) -> Tuple[str, str]:
     
     # Read config file
     config = configparser.ConfigParser()
-    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+    config_dir = get_app_config_dir()
     config_file = os.path.join(config_dir, "config.ini")
     
     # Create config directory if it doesn't exist
@@ -134,7 +134,7 @@ def get_cursor_machine_id_path(translator=None) -> str:
         str: Path to machineId file
     """
     # Read configuration
-    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+    config_dir = get_app_config_dir()
     config_file = os.path.join(config_dir, "config.ini")
     config = configparser.ConfigParser()
     
@@ -171,7 +171,7 @@ def get_cursor_machine_id_path(translator=None) -> str:
 
 def get_workbench_cursor_path(translator=None) -> str:
     """Get Cursor workbench.desktop.main.js path"""
-    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+    config_dir = get_app_config_dir()
     config_file = os.path.join(config_dir, "config.ini")
     config = configparser.ConfigParser()
     configured_path = None
@@ -423,7 +423,7 @@ class MachineIDResetter:
         self.translator = translator
 
         # Read configuration
-        config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+        config_dir = get_app_config_dir()
         config_file = os.path.join(config_dir, "config.ini")
         config = configparser.ConfigParser()
         
@@ -702,7 +702,7 @@ class MachineIDResetter:
                 print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('reset.version_less_than_0_45')}{Style.RESET_ALL}")
 
             try:
-                from vip_activate import activate_vip_membership
+                from cursor_membership import activate_vip_membership
                 activate_vip_membership(self.translator)
             except Exception as e:
                 print(f"{Fore.YELLOW}{EMOJI['WARNING']} VIP: {e}{Style.RESET_ALL}")

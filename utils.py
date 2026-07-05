@@ -5,6 +5,13 @@ import random
 import shutil
 import configparser
 
+from branding import resolve_config_dir, env_flag
+
+def get_app_config_dir():
+    """Return MiMo VIP config directory under Documents."""
+    return resolve_config_dir(get_user_documents_path())
+
+
 def get_user_documents_path():
     """Get user documents path"""
     if platform.system() == "Windows":
@@ -95,7 +102,7 @@ def persist_cursor_app_path(app_path):
     """Save resolved Cursor app path and related paths to config.ini."""
     if not app_path:
         return
-    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+    config_dir = get_app_config_dir()
     config_file = os.path.join(config_dir, "config.ini")
     config = configparser.ConfigParser()
     if os.path.exists(config_file):
@@ -116,7 +123,7 @@ def persist_cursor_app_path(app_path):
         config.write(f)
 
 def get_configured_cursor_app_path():
-    config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+    config_dir = get_app_config_dir()
     config_file = os.path.join(config_dir, "config.ini")
     configured = None
     if os.path.exists(config_file):
@@ -161,7 +168,7 @@ def get_cursor_workbench_path(app_path=None):
     return main if os.path.isfile(main) else None
 
 def should_keep_cursor_running():
-    return os.getenv("CURSOR_FREE_VIP_KEEP_RUNNING", "").strip().lower() in ("1", "true", "yes", "on")
+    return env_flag("KEEP_RUNNING", legacy_env="CURSOR_FREE_VIP_KEEP_RUNNING")
 
 def get_random_wait_time(config, timing_key):
     """Get random wait time based on configuration timing settings

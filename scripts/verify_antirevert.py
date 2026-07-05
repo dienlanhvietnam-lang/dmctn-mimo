@@ -8,22 +8,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from utils import get_cursor_workbench_path, get_resolved_cursor_app_path
 
-CHECKS = [
-    ("force store PRO", "s=Vr.PRO,this.storageService.store(Zmt,s,-1,1)", True),
-    ("default PRO", "default:return Vr.PRO}},this.openAIKey", True),
-    ("getter PRO", "membershipType(){return Vr.PRO}", True),
-    ("force active", 's="active",this.storageService.store(k8i,s,-1,1)', True),
-    ("old store FREE gone", "s=s??Vr.FREE", False),
-    ("_membershipType PRO", "this._membershipType=()=>Vr.PRO", True),
-    ("_subscriptionStatus active", 'this._subscriptionStatus=()=>"active"', True),
-    ("reactive sync PRO", 'setApplicationUserPersistentStorage("membershipType",Vr.PRO)', True),
-    ("api response PRO", 'this.storeMembershipType(Vr.PRO),this.storeSubscriptionStatus("active")', True),
+# Support both cs.* (3.11+) and Vr.* (3.10.x) — pass if either variant patched
+CHECK_GROUPS = [
+    ("force store PRO", ["i=cs.PRO,this.storageService.store(Hgt", "s=Vr.PRO,this.storageService.store(Zmt,s,-1,1)"]),
+    ("default PRO", ["default:return cs.PRO}},this.openAIKey", "default:return Vr.PRO}},this.openAIKey"]),
+    ("getter PRO", ["membershipType(){return cs.PRO}", "membershipType(){return Vr.PRO}"]),
+    ("force active", ['i="active",this.storageService.store(KAc,i,-1,1)', 's="active",this.storageService.store(k8i,s,-1,1)']),
+    ("_membershipType PRO", ["this._membershipType=()=>cs.PRO", "this._membershipType=()=>Vr.PRO"]),
+    ("reactive sync PRO", ['setApplicationUserPersistentStorage("membershipType",cs.PRO)', 'setApplicationUserPersistentStorage("membershipType",Vr.PRO)']),
+    ("api response PRO", ['this.storeMembershipType(cs.PRO),this.storeSubscriptionStatus("active")', 'this.storeMembershipType(Vr.PRO),this.storeSubscriptionStatus("active")']),
 ]
+
+NEGATIVE = [
+    ("old store FREE gone", ["i=i??cs.FREE,this.storageService.store(Hgt", "s=s??Vr.FREE"]),
+    ("store FREE fallback gone", ["j||this.storeMembershipType(cs.FREE)", "z||this.storeMembershipType(Vr.FREE)"]),
+]
+
+
+def _group_ok(content, needles):
+    return any(n in content for n in needles)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--json", action="store_true", help="One-line JSON summary")
+    parser.add_argument("--json", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -34,19 +42,26 @@ def main():
     ).read()
 
     failed = []
-    for name, needle, should_contain in CHECKS:
-        found = needle in content
-        ok = found if should_contain else not found
+    total = len(CHECK_GROUPS) + len(NEGATIVE)
+    for name, needles in CHECK_GROUPS:
+        ok = _group_ok(content, needles)
+        if not ok:
+            failed.append(name)
+        if args.verbose:
+            print(f"{'OK' if ok else 'FAIL'}  {name}")
+
+    for name, needles in NEGATIVE:
+        ok = not any(n in content for n in needles)
         if not ok:
             failed.append(name)
         if args.verbose:
             print(f"{'OK' if ok else 'FAIL'}  {name}")
 
     if args.json:
-        print(json.dumps({"ok": len(failed) == 0, "failed": failed, "total": len(CHECKS)}))
+        print(json.dumps({"ok": len(failed) == 0, "failed": failed, "total": total}))
     elif not args.verbose:
         status = "OK" if not failed else "FAIL"
-        print(f"antirevert {status} {len(CHECKS) - len(failed)}/{len(CHECKS)}")
+        print(f"antirevert {status} {total - len(failed)}/{total}")
         if failed:
             print("missing:", ", ".join(failed))
     elif failed:

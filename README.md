@@ -1,4 +1,4 @@
-# ➤ Cursor Free VIP
+# ➤ MiNo VIP
 
 <div align="center">
 <p align="center">
@@ -7,10 +7,10 @@
 
 <p align="center">
 
-[![Release](https://img.shields.io/github/v/release/hovanhoa/cursor-free-vip?style=flat-square&logo=github&color=blue)](https://github.com/hovanhoa/cursor-free-vip/releases/latest)
+[![Release](https://img.shields.io/github/v/release/hovanhoa/mino-vip?style=flat-square&logo=github&color=blue)](https://github.com/hovanhoa/mino-vip/releases/latest)
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
-[![Stars](https://img.shields.io/github/stars/hovanhoa/cursor-free-vip?style=flat-square&logo=github)](https://github.com/hovanhoa/cursor-free-vip/stargazers)
-[![Download](https://img.shields.io/github/downloads/hovanhoa/cursor-free-vip/total?style=flat-square&logo=github&color=52c41a1)](https://github.com/hovanhoa/cursor-free-vip/releases/latest)
+[![Stars](https://img.shields.io/github/stars/hovanhoa/mino-vip?style=flat-square&logo=github)](https://github.com/hovanhoa/mino-vip/stargazers)
+[![Download](https://img.shields.io/github/downloads/hovanhoa/mino-vip/total?style=flat-square&logo=github&color=52c41a1)](https://github.com/hovanhoa/mino-vip/releases/latest)
 
 </p>
 <h4>Support Latest 0.48.x Version | 支持最新 0.48.x 版本</h4>
@@ -35,6 +35,10 @@ Always clean your browser's cache and cookies. If possible, use a VPN to create 
 ##### 如果沒有 Google Chrome，可以從[這裡](https://www.google.com/intl/en_pk/chrome/)下載
 
 </div>
+
+> **Agent / AI:** Trước khi sửa patch workbench, đọc [docs/AGENT-WORKBENCH-PATCH-SAFETY.md](docs/AGENT-WORKBENCH-PATCH-SAFETY.md) — ghi lại sự cố treo UI do patch `getTeams` dùng `/*` (2026-07-05).
+>
+> **MiMo CLI / reset menu 19–20:** đọc [docs/AGENT-MIMO-VIP-GUIDE.md](docs/AGENT-MIMO-VIP-GUIDE.md) *(nội bộ, chưa phát hành user)*.
 
 ## 🔄 Change Log | 更新日志
 
@@ -74,13 +78,13 @@ Always clean your browser's cache and cookies. If possible, use a VPN to create 
 **Linux/macOS**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hovanhoa/cursor-free-vip/main/scripts/install.sh -o install.sh && chmod +x install.sh && ./install.sh
+curl -fsSL https://raw.githubusercontent.com/hovanhoa/mino-vip/main/scripts/install.sh -o install.sh && chmod +x install.sh && ./install.sh
 ```
 
 **Windows**
 
 ```powershell
-irm https://raw.githubusercontent.com/hovanhoa/cursor-free-vip/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/hovanhoa/mino-vip/main/scripts/install.ps1 | iex
 ```
 
 </details>
@@ -91,13 +95,13 @@ irm https://raw.githubusercontent.com/hovanhoa/cursor-free-vip/main/scripts/inst
 **Linux/macOS**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hovanhoa/cursor-free-vip/main/scripts/reset.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/hovanhoa/mino-vip/main/scripts/reset.sh | sudo bash
 ```
 
 **Windows**
 
 ```powershell
-irm https://raw.githubusercontent.com/hovanhoa/cursor-free-vip/main/scripts/reset.ps1 | iex
+irm https://raw.githubusercontent.com/hovanhoa/mino-vip/main/scripts/reset.ps1 | iex
 ```
 
 </details>
@@ -107,7 +111,7 @@ If you want to stop the script, please press Ctrl+C<br>要停止腳本，請按 
 ## ❗ Note | 注意事項
 
 📝 Config | 文件配置
-`Win / Macos / Linux Path | 路徑 [Documents/.cursor-free-vip/config.ini]`
+`Win / Macos / Linux Path | 路徑 [Documents/.mino-vip/config.ini]`
 <details>
 <summary><b>⭐ Config | 文件配置</b></summary>
 
@@ -189,8 +193,8 @@ show_account_info = True
 歡迎提交 Issue 和 Pull Request！
 
 
-<a href="https://github.com/hovanhoa/cursor-free-vip/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=hovanhoa/cursor-free-vip&preview=true&max=&columns=" />
+<a href="https://github.com/hovanhoa/mino-vip/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=hovanhoa/mino-vip&preview=true&max=&columns=" />
 </a>
 <br /><br />
 
@@ -220,7 +224,7 @@ by the user.
 
 <div align="center">
 
-[![Star History Chart](https://api.star-history.com/svg?repos=hovanhoa/cursor-free-vip&type=Date)](https://star-history.com/#hovanhoa/cursor-free-vip&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=hovanhoa/mino-vip&type=Date)](https://star-history.com/#hovanhoa/mino-vip&Date)
 
 </div>
 

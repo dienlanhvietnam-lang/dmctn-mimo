@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title Cursor Free VIP - Fix Loop
+title MiMo VIP - Fix Loop
 cd /d "%~dp0"
 
-set CURSOR_FREE_VIP_LANG=vi
-set CURSOR_FREE_VIP_KEEP_RUNNING=1
+set MINO_VIP_LANG=vi
+set MINO_VIP_KEEP_RUNNING=1
 
 where python >nul 2>&1
 if errorlevel 1 (

@@ -1,0 +1,13 @@
+{
+  "name": "mimo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local MiMo CLI for MiMo VIP project",
+  "scripts": {
+    "mimo": "mimo",
+    "start": "mimo"
+  },
+  "dependencies": {
+    "@mimo-ai/cli": "^0.1.1"
+  }
+}

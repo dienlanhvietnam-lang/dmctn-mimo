@@ -312,22 +312,62 @@ def get_email_from_sqlite(sqlite_path):
     
     return None
 
+def _acc_t(translator):
+    """Return a lookup that falls back to a literal when the key is missing."""
+    def _t(key, fallback):
+        if translator:
+            value = translator.get(key)
+            if value and value != key:
+                return value
+        return fallback
+    return _t
+
+
+def _plan_and_status(subscription_info):
+    """Extract (plan, status_code, is_active) from a stripe/profile payload."""
+    if not subscription_info:
+        return "Free", None, True
+    if "membershipType" in subscription_info:
+        membership = (subscription_info.get("membershipType") or "").strip()
+        status = (subscription_info.get("subscriptionStatus") or "").strip()
+        plan = membership.replace("_", " ").title() if membership else "Free"
+        return plan, (status or None), (status.lower() == "active")
+    subscription = subscription_info.get("subscription")
+    if subscription:
+        plan = subscription.get("plan", {}).get("nickname", "Unknown")
+        status = (subscription.get("status") or "").strip()
+        return plan, (status or None), (status.lower() == "active")
+    return "Free", None, True
+
+
+_STATUS_VI = {
+    "active": "Đang hoạt động",
+    "past_due": "Quá hạn",
+    "trialing": "Dùng thử",
+    "canceled": "Đã hủy",
+    "unpaid": "Chưa thanh toán",
+    "incomplete": "Chưa hoàn tất",
+}
+
+
 def display_account_info(translator=None):
-    """display account info"""
-    print(f"\n{Fore.CYAN}{'─' * 70}{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{EMOJI['USER']} {translator.get('account_info.title') if translator else 'Cursor Account Information'}{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{'─' * 70}{Style.RESET_ALL}")
-    
-    # get token
+    """Render the account summary panel (03)."""
+    import ui
+
+    T = _acc_t(translator)
+    is_vi = bool(translator and getattr(translator, "current_language", "") == "vi")
+
+    # get token + config path
     token = get_token()
-    if not token:
-        print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('account_info.token_not_found') if translator else 'Token not found. Please login to Cursor first.'}{Style.RESET_ALL}")
-        return
-    
-    # get path info
-    paths = get_token_from_config()
-    if not paths:
-        print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('account_info.config_not_found') if translator else 'Configuration not found.'}{Style.RESET_ALL}")
+    paths = get_token_from_config() if token else None
+    acc_title = "TÓM TẮT TÀI KHOẢN" if is_vi else T("account_info.title", "Account Summary")
+    if not token or not paths:
+        ui.panel(
+            [f"{ui.WARN}{T('account_info.token_not_found', 'Chưa đăng nhập Cursor (không tìm thấy token)')}{ui.RESET}"],
+            number="03",
+            title=acc_title.upper(),
+            icon=ui.ICON_WARN,
+        )
         return
     
     # get email info - try multiple sources
@@ -337,179 +377,62 @@ def display_account_info(translator=None):
     if not email:
         email = get_email_from_sqlite(paths['sqlite_path'])
     
-    # get subscription info
+    # subscription (used for plan/status + email fallback)
     try:
         subscription_info = UsageManager.get_stripe_profile(token)
     except Exception as e:
-        logger.error(f"Get subscription info failed: {str(e)}")
+        logger.debug(f"Get subscription info failed: {str(e)}")
         subscription_info = None
-    
-    # if not found in storage and sqlite, try from subscription info
+
     if not email and subscription_info:
-        # try to get email from subscription info
         if 'customer' in subscription_info and 'email' in subscription_info['customer']:
             email = subscription_info['customer']['email']
-    
-    # get usage info - silently handle errors
+
+    # usage (401 when auth expired — shown inline, not logged loudly)
     try:
         usage_info = UsageManager.get_usage(token)
     except Exception as e:
-        logger.error(f"Get usage info failed: {str(e)}")
+        logger.debug(f"Get usage info failed: {str(e)}")
         usage_info = None
-    
-    # Prepare left and right info
-    left_info = []
-    right_info = []
-    
-    # Left side shows account info
-    if email:
-        left_info.append(f"{Fore.GREEN}{EMOJI['USER']} {translator.get('account_info.email') if translator else 'Email'}: {Fore.WHITE}{email}{Style.RESET_ALL}")
-    else:
-        left_info.append(f"{Fore.YELLOW}{EMOJI['WARNING']} {translator.get('account_info.email_not_found') if translator else 'Email not found'}{Style.RESET_ALL}")
-    
-    # Add an empty line
-    # left_info.append("")
-    
-    # Show subscription type
-    if subscription_info:
-        subscription_type = format_subscription_type(subscription_info)
-        left_info.append(f"{Fore.GREEN}{EMOJI['SUBSCRIPTION']} {translator.get('account_info.subscription') if translator else 'Subscription'}: {Fore.WHITE}{subscription_type}{Style.RESET_ALL}")
-        
-        # Show remaining trial days
-        days_remaining = subscription_info.get("daysRemainingOnTrial")
-        if days_remaining is not None and days_remaining > 0:
-            left_info.append(f"{Fore.GREEN}{EMOJI['TIME']} {translator.get('account_info.trial_remaining') if translator else 'Remaining Pro Trial'}: {Fore.WHITE}{days_remaining} {translator.get('account_info.days') if translator else 'days'}{Style.RESET_ALL}")
-    else:
-        left_info.append(f"{Fore.YELLOW}{EMOJI['WARNING']} {translator.get('account_info.subscription_not_found') if translator else 'Subscription information not found'}{Style.RESET_ALL}")
-    
-    # Right side shows usage info - only if available
+
+    plan, status_code, is_active = _plan_and_status(subscription_info)
+
+    labels = [
+        T("account_info.email", "Email"),
+        T("account_info.subscription", "Gói dịch vụ" if is_vi else "Subscription"),
+        "Trạng thái thanh toán" if is_vi else "Payment status",
+        "API sử dụng" if is_vi else "API usage",
+    ]
+    label_w = max(ui.display_width(x) for x in labels)
+
+    rows = []
+    rows.append(ui.kv(labels[0], email or T("account_info.email_not_found", "Không tìm thấy"),
+                      label_w, value_color=ui.TEXT if email else ui.WARN))
+
+    plan_ok = plan.lower().split()[0] in ("pro", "team", "enterprise", "business", "ultra")
+    rows.append(ui.kv(labels[1], plan, label_w, value_color=ui.OK if plan_ok else ui.TEXT))
+
+    if status_code:
+        status_label = _STATUS_VI.get(status_code.lower(), status_code.replace("_", " ").title()) if is_vi \
+            else status_code.replace("_", " ").title()
+        rows.append(ui.kv(labels[2], status_label, label_w, value_color=ui.OK if is_active else ui.WARN))
+
     if usage_info:
-        right_info.append(f"{Fore.GREEN}{EMOJI['USAGE']} {translator.get('account_info.usage') if translator else 'Usage Statistics'}:{Style.RESET_ALL}")
-        
-        # Premium usage
-        premium_usage = usage_info.get('premium_usage', 0)
-        max_premium_usage = usage_info.get('max_premium_usage', "No Limit")
-        
-        #  make sure the value is not None
-        if premium_usage is None:
-            premium_usage = 0
-        
-        # handle "No Limit" case
-        if isinstance(max_premium_usage, str) and max_premium_usage == "No Limit":
-            premium_color = Fore.GREEN  # when there is no limit, use green
-            premium_display = f"{premium_usage}/{max_premium_usage}"
-        else:
-            # calculate percentage when the value is a number
-            if max_premium_usage is None or max_premium_usage == 0:
-                max_premium_usage = 999
-                premium_percentage = 0
-            else:
-                premium_percentage = (premium_usage / max_premium_usage) * 100
-            
-            # select color based on usage percentage
-            premium_color = Fore.GREEN
-            if premium_percentage > 70:
-                premium_color = Fore.YELLOW
-            if premium_percentage > 90:
-                premium_color = Fore.RED
-            
-            premium_display = f"{premium_usage}/{max_premium_usage} ({premium_percentage:.1f}%)"
-        
-        right_info.append(f"{Fore.YELLOW}{EMOJI['PREMIUM']} {translator.get('account_info.premium_usage') if translator else 'Fast Response'}: {premium_color}{premium_display}{Style.RESET_ALL}")
-        
-        # Slow Response
-        basic_usage = usage_info.get('basic_usage', 0)
-        max_basic_usage = usage_info.get('max_basic_usage', "No Limit")
-        
-        # make sure the value is not None
-        if basic_usage is None:
-            basic_usage = 0
-        
-        # handle "No Limit" case
-        if isinstance(max_basic_usage, str) and max_basic_usage == "No Limit":
-            basic_color = Fore.GREEN  # when there is no limit, use green
-            basic_display = f"{basic_usage}/{max_basic_usage}"
-        else:
-            # calculate percentage when the value is a number
-            if max_basic_usage is None or max_basic_usage == 0:
-                max_basic_usage = 999
-                basic_percentage = 0
-            else:
-                basic_percentage = (basic_usage / max_basic_usage) * 100
-            
-            # select color based on usage percentage
-            basic_color = Fore.GREEN
-            if basic_percentage > 70:
-                basic_color = Fore.YELLOW
-            if basic_percentage > 90:
-                basic_color = Fore.RED
-            
-            basic_display = f"{basic_usage}/{max_basic_usage} ({basic_percentage:.1f}%)"
-        
-        right_info.append(f"{Fore.BLUE}{EMOJI['BASIC']} {translator.get('account_info.basic_usage') if translator else 'Slow Response'}: {basic_color}{basic_display}{Style.RESET_ALL}")
+        premium = usage_info.get("premium_usage", 0) or 0
+        max_premium = usage_info.get("max_premium_usage", "No Limit")
+        rows.append(ui.kv(labels[3], f"{premium}/{max_premium}", label_w, value_color=ui.OK))
+        icon = ui.ICON_OK if is_active else ui.ICON_WARN
     else:
-        # if get usage info failed, only log in log, not show in interface
-        # you can choose to not show any usage info, or show a simple prompt
-        # right_info.append(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('account_info.usage_unavailable') if translator else 'Usage information unavailable'}{Style.RESET_ALL}")
-        pass  # not show any usage info
-    
-    # Calculate the maximum display width of left info
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-    
-    def get_display_width(s):
-        """Calculate the display width of a string, considering Chinese characters and emojis"""
-        # Remove ANSI color codes
-        clean_s = ansi_escape.sub('', s)
-        width = 0
-        for c in clean_s:
-            # Chinese characters and some emojis occupy two character widths
-            if ord(c) > 127:
-                width += 2
-            else:
-                width += 1
-        return width
-    
-    max_left_width = 0
-    for item in left_info:
-        width = get_display_width(item)
-        max_left_width = max(max_left_width, width)
-    
-    # Set the starting position of right info
-    fixed_spacing = 4  # Fixed spacing
-    right_start = max_left_width + fixed_spacing
-    
-    # Calculate the number of spaces needed for right info
-    spaces_list = []
-    for i in range(len(left_info)):
-        if i < len(left_info):
-            left_item = left_info[i]
-            left_width = get_display_width(left_item)
-            spaces = right_start - left_width
-            spaces_list.append(spaces)
-    
-    # Print info
-    max_rows = max(len(left_info), len(right_info))
-    
-    for i in range(max_rows):
-        # Print left info
-        if i < len(left_info):
-            left_item = left_info[i]
-            print(left_item, end='')
-            
-            # Use pre-calculated spaces
-            spaces = spaces_list[i]
-        else:
-            # If left side has no items, print only spaces
-            spaces = right_start
-            print('', end='')
-        
-        # Print right info
-        if i < len(right_info):
-            print(' ' * spaces + right_info[i])
-        else:
-            print()  # Change line
-    
-    print(f"{Fore.CYAN}{'─' * 70}{Style.RESET_ALL}")
+        unauth = "Chưa xác thực / 401" if is_vi else "Unauthorized / 401"
+        rows.append(ui.kv(labels[3], unauth, label_w, value_color=ui.ERR))
+        icon = ui.ICON_WARN if is_active else ui.ICON_ERROR
+
+    rows.append(ui.hint(("Đăng nhập lại hoặc kiểm tra tài khoản" if is_vi
+                         else "Re-login or check the account") if not usage_info else ""))
+    if not rows[-1].strip():
+        rows.pop()
+
+    ui.panel(rows, number="03", title=acc_title.upper(), icon=icon)
 
 def main(translator=None):
     """main function"""

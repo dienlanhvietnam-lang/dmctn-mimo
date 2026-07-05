@@ -1,12 +1,17 @@
-"""Activate local VIP/Pro flags and patch Cursor UI."""
-from colorama import Fore, Style, init
-from cursor_auth import CursorAuth
-from workbench_patches import apply_workbench_patches
-from utils import get_cursor_workbench_path, get_resolved_cursor_app_path
+"""Internal Cursor Pro membership + workbench patches (used by reset/register flows)."""
+from __future__ import annotations
+
 import os
 import shutil
 import tempfile
 from datetime import datetime
+
+from colorama import Fore, Style, init
+
+from branding import env_flag
+from cursor_auth import CursorAuth
+from utils import get_cursor_workbench_path, get_resolved_cursor_app_path
+from workbench_patches import apply_workbench_patches
 
 init()
 
@@ -28,11 +33,11 @@ def patch_workbench_vip(translator=None):
     patched, applied = apply_workbench_patches(content)
     changed = patched != content
     if not changed:
-        if not os.environ.get("CURSOR_FREE_VIP_QUIET"):
+        if not env_flag("QUIET", legacy_env="CURSOR_FREE_VIP_QUIET"):
             print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('vip.no_ui_changes') if translator else 'VIP UI patterns already applied or not found'}{Style.RESET_ALL}")
         return True
 
-    if not os.environ.get("CURSOR_FREE_VIP_QUIET"):
+    if not env_flag("QUIET", legacy_env="CURSOR_FREE_VIP_QUIET"):
         print(f"{Fore.CYAN}{EMOJI['INFO']} {translator.get('vip.patches_applied', count=applied) if translator else f'Applied {applied} patches'}{Style.RESET_ALL}")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -43,7 +48,7 @@ def patch_workbench_vip(translator=None):
         tmp.write(patched)
         tmp_path = tmp.name
     shutil.move(tmp_path, workbench_path)
-    if not os.environ.get("CURSOR_FREE_VIP_QUIET"):
+    if not env_flag("QUIET", legacy_env="CURSOR_FREE_VIP_QUIET"):
         print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {translator.get('vip.workbench_patched') if translator else 'VIP UI patched'}: {workbench_path}{Style.RESET_ALL}")
     return True
 
@@ -61,20 +66,3 @@ def activate_vip_membership(translator=None):
     auth._sync_storage_json(updates)
     print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {translator.get('vip.membership_activated') if translator else 'VIP membership activated locally'}{Style.RESET_ALL}")
     return True
-
-
-def run(translator=None):
-    print(f"\n{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{EMOJI['RESET']} {translator.get('vip.title') if translator else 'Activate VIP Account'}{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
-    ok = activate_vip_membership(translator)
-    try:
-        patch_workbench_vip(translator)
-    except PermissionError:
-        print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('vip.file_locked') if translator else 'File locked while Cursor is running; restart Cursor after closing it once to apply UI patch.'}{Style.RESET_ALL}")
-    except Exception as e:
-        print(f"{Fore.RED}{EMOJI['ERROR']} {e}{Style.RESET_ALL}")
-        ok = False
-    if ok:
-        print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('vip.reload_hint') if translator else 'Reload Cursor: Ctrl+Shift+P -> Developer: Reload Window'}{Style.RESET_ALL}")
-    return ok

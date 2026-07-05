@@ -14,6 +14,7 @@ import configparser
 from new_signup import get_user_documents_path
 import traceback
 from config import get_config
+from utils import get_app_config_dir
 import glob
 from reset_machine_manual import get_cursor_paths, get_workbench_cursor_path, get_cursor_machine_id_path
 from workbench_patches import apply_workbench_patches
@@ -264,7 +265,7 @@ class MachineIDResetter:
         self.translator = translator
 
         # Read configuration
-        config_dir = os.path.join(get_user_documents_path(), ".cursor-free-vip")
+        config_dir = get_app_config_dir()
         config_file = os.path.join(config_dir, "config.ini")
         config = configparser.ConfigParser()
         

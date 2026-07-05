@@ -14,7 +14,6 @@ import compileall
 import io
 import json
 import os
-import sqlite3
 import subprocess
 import sys
 from contextlib import redirect_stderr, redirect_stdout
@@ -23,41 +22,40 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
-os.environ.setdefault("CURSOR_FREE_VIP_LANG", "vi")
-os.environ.setdefault("CURSOR_FREE_VIP_KEEP_RUNNING", "1")
+os.environ.setdefault("MIMO_VIP_LANG", "vi")
+os.environ.setdefault("MIMO_VIP_KEEP_RUNNING", "1")
+os.environ.setdefault("MINO_VIP_LANG", os.environ["MIMO_VIP_LANG"])
+os.environ.setdefault("MINO_VIP_KEEP_RUNNING", os.environ["MIMO_VIP_KEEP_RUNNING"])
+os.environ.setdefault("CURSOR_FREE_VIP_LANG", os.environ["MIMO_VIP_LANG"])
+os.environ.setdefault("CURSOR_FREE_VIP_KEEP_RUNNING", os.environ["MIMO_VIP_KEEP_RUNNING"])
 
 PHASES = [
     "01_syntax",
     "02_imports",
     "03_locales",
     "04_config",
-    "05_cursor_paths",
-    "06_auth_token",
-    "07_auth_membership",
+    "05_mimo_cli",
+    "06_mimo_bootstrap",
+    "07_mimo_slots",
     "08_e2e_smoke",
-    "09_antirevert",
-    "10_sync_block",
-    "11_patches_complete",
+    "09_ui_theme",
+    "10_mimo_protected",
+    "11_branding",
     "12_translator_keys",
 ]
 
 CORE_MODULES = [
-    "main", "config", "utils", "cursor_auth", "cursor_acc_info",
-    "vip_activate", "workbench_patches", "reset_machine_manual",
-    "bypass_token_limit", "bypass_version", "disable_auto_update",
-    "check_user_authorized", "oauth_auth", "totally_reset_cursor", "quit_cursor",
+    "main", "config", "utils", "ui", "logo", "branding",
+    "reset_mimo_machine", "totally_reset_mimo", "setup_mimo_auto", "mimo_auth",
+    "mimo_account_slots", "mimo_platform_login", "mimo_manage_accounts", "chrome_profile",
+    "mimo_paths",
 ]
 
 LOCALE_KEYS = [
-    "menu.activate_vip",
-    "vip.title",
-    "vip.membership_activated",
-    "vip.workbench_patched",
-    "vip.patches_applied",
-    "vip.reload_hint",
-    "vip.sync_blocked",
-    "auth.storage_synced",
-    "update.keep_cursor_running",
+    "menu.mimo_platform_login",
+    "menu.mimo_manage_accounts",
+    "mimo_slots.title",
+    "mimo_login.title",
 ]
 
 
@@ -71,6 +69,8 @@ def _nested_get(data: dict, dotted: str):
 
 
 def _quiet_run(fn):
+    os.environ["MIMO_VIP_QUIET"] = "1"
+    os.environ["MINO_VIP_QUIET"] = "1"
     os.environ["CURSOR_FREE_VIP_QUIET"] = "1"
     with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
         return fn()
@@ -130,55 +130,35 @@ class PhaseRunner:
 
     def phase_config(self):
         from config import get_config
+        from branding import CONFIG_DIR_NAME
+
         cfg = get_config()
         if not cfg:
             return False, "get_config returned None"
-        section = "WindowsPaths" if sys.platform == "win32" else "MacPaths" if sys.platform == "darwin" else "LinuxPaths"
-        if not cfg.has_section(section):
-            return False, f"missing section {section}"
-        path = cfg.get(section, "cursor_path", fallback="")
-        return bool(path), f"cursor_path={path or 'empty'}"
+        if not cfg.has_section("Utils"):
+            return False, "missing Utils section"
+        return True, f"config_dir={CONFIG_DIR_NAME}"
 
-    def phase_cursor_paths(self):
-        from utils import get_resolved_cursor_app_path, get_cursor_workbench_path, get_cursor_product_json_path
-        app = get_resolved_cursor_app_path()
-        wb = get_cursor_workbench_path(app)
-        pj = get_cursor_product_json_path(app)
-        if not app or not os.path.isdir(app):
-            return False, f"app dir missing: {app}"
-        missing = [p for p in (wb, pj) if not p or not os.path.isfile(p)]
-        return not missing, "ok" if not missing else f"missing {missing[0]}"
+    def phase_mimo_cli(self):
+        mimo_cmd = ROOT / "mimo" / "node_modules" / ".bin" / "mimo.cmd"
+        if sys.platform == "win32":
+            return mimo_cmd.is_file(), str(mimo_cmd.name if mimo_cmd.is_file() else mimo_cmd)
+        mimo_bin = ROOT / "mimo" / "node_modules" / ".bin" / "mimo"
+        return mimo_bin.is_file(), str(mimo_bin)
 
-    def phase_auth_token(self):
-        from cursor_acc_info import get_token
-        token = get_token()
-        if not token:
-            return True, "skip (no token)"
-        if not (token.startswith("eyJ") and len(token) > 100):
-            return False, f"bad token len={len(token)}"
-        return True, f"jwt len={len(token)}"
+    def phase_mimo_bootstrap(self):
+        from mimo_auth import verify_free_bootstrap
 
-    def phase_auth_membership(self):
-        from config import get_config
-        cfg = get_config()
-        section = "WindowsPaths" if sys.platform == "win32" else "MacPaths" if sys.platform == "darwin" else "LinuxPaths"
-        db = cfg.get(section, "sqlite_path", fallback="")
-        if not db or not os.path.isfile(db):
-            return True, "skip (no db)"
-        conn = sqlite3.connect(db)
-        cur = conn.cursor()
-        pro = cur.execute(
-            "SELECT value FROM ItemTable WHERE key='cursorAuth/stripeMembershipType'"
-        ).fetchone()
-        active = cur.execute(
-            "SELECT value FROM ItemTable WHERE key='cursorAuth/stripeSubscriptionStatus'"
-        ).fetchone()
-        conn.close()
-        if not pro or pro[0] != "pro":
-            return False, f"membership={pro[0] if pro else 'missing'}"
-        if not active or active[0] != "active":
-            return False, f"status={active[0] if active else 'missing'}"
-        return True, "pro/active"
+        data = verify_free_bootstrap()
+        jwt = data.get("jwt", "")
+        return bool(jwt), f"jwt len={len(jwt)}"
+
+    def phase_mimo_slots(self):
+        from mimo_paths import get_mimo_accounts_dir, get_mimo_manifest_path
+
+        accounts = get_mimo_accounts_dir()
+        manifest = get_mimo_manifest_path()
+        return accounts.endswith("accounts") and manifest.endswith("manifest.json"), "ok"
 
     def phase_e2e_smoke(self):
         r = subprocess.run(
@@ -193,36 +173,30 @@ class PhaseRunner:
         failed = data.get("failed", [])
         return not failed, f"{data.get('passed')}/{data.get('total')}"
 
-    def phase_antirevert(self):
-        r = subprocess.run(
-            [sys.executable, "scripts/verify_antirevert.py", "--json"],
-            capture_output=True,
-            text=True,
-            cwd=ROOT,
-        )
-        data = json.loads(r.stdout.strip())
-        return data.get("ok"), f"{data.get('total') - len(data.get('failed', []))}/{data.get('total')}"
+    def phase_ui_theme(self):
+        import ui
 
-    def phase_sync_block(self):
-        r = subprocess.run(
-            [sys.executable, "scripts/verify_sync_block.py", "--json"],
-            capture_output=True,
-            text=True,
-            cwd=ROOT,
-        )
-        data = json.loads(r.stdout.strip())
-        return data.get("ok"), f"{data.get('total') - len(data.get('failed', []))}/{data.get('total')}"
+        assert callable(ui.panel)
+        assert ui.box_width() >= ui.MIN_WIDTH
+        return True, f"width={ui.box_width()}"
 
-    def phase_patches_complete(self):
-        from utils import get_cursor_workbench_path, get_resolved_cursor_app_path
-        from workbench_patches import count_pending_patches
-        wb = get_cursor_workbench_path(get_resolved_cursor_app_path())
-        content = Path(wb).read_text(encoding="utf-8", errors="ignore")
-        pending = count_pending_patches(content)
-        return pending == 0, f"pending={pending}"
+    def phase_mimo_protected(self):
+        from mimo_paths import get_mimo_protected_dirs, get_mimo_wipe_dirs
+
+        protected = get_mimo_protected_dirs()
+        wipe = get_mimo_wipe_dirs()
+        bad = [name for name in protected if any(p.endswith(name) for p in wipe)]
+        return not bad, "ok" if not bad else f"leak {bad}"
+
+    def phase_branding(self):
+        from branding import APP_NAME, CONFIG_DIR_NAME
+
+        ok = APP_NAME == "MiMo VIP" and CONFIG_DIR_NAME == ".mimo-vip"
+        return ok, APP_NAME
 
     def phase_translator_keys(self):
         from main import Translator
+
         t = Translator()
         t.current_language = "vi"
         t.load_translations()
@@ -232,23 +206,16 @@ class PhaseRunner:
 
 def apply_fixes(failed_phases: list[str]) -> list[str]:
     applied = []
-    fixable = {"07_auth_membership", "09_antirevert", "10_sync_block", "11_patches_complete"}
-    if fixable & set(failed_phases):
-        from main import translator
-        import vip_activate
-        _quiet_run(lambda: vip_activate.activate_vip_membership(translator))
-        applied.append("vip_membership")
-        try:
-            _quiet_run(lambda: vip_activate.patch_workbench_vip(translator))
-            applied.append("workbench_patch")
-        except PermissionError:
-            applied.append("workbench_locked")
-        except Exception as e:
-            applied.append(f"workbench_error:{e}")
     if "04_config" in failed_phases:
         from config import get_config
+
         get_config()
         applied.append("config_resync")
+    if "06_mimo_bootstrap" in failed_phases:
+        from setup_mimo_auto import apply_mimo_auto_config
+
+        apply_mimo_auto_config()
+        applied.append("mimo_auto_config")
     return applied
 
 

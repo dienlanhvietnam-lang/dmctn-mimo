@@ -5,11 +5,20 @@ import random
 import webbrowser
 import sys
 import json
-from DrissionPage import ChromiumPage, ChromiumOptions
+from DrissionPage import ChromiumPage
 from cursor_auth import CursorAuth
-from utils import get_random_wait_time, get_default_chrome_path, should_keep_cursor_running
+from utils import get_random_wait_time, should_keep_cursor_running
 from config import get_config
 import platform
+
+from chrome_profile import (
+    configure_browser_options,
+    get_available_profiles,
+    get_browser_path,
+    get_user_data_directory,
+    kill_browser_processes,
+    select_profile as chrome_select_profile,
+)
 
 # Initialize colorama
 init()
@@ -35,68 +44,14 @@ class OAuthHandler:
         self.selected_profile = None
         
     def _get_available_profiles(self, user_data_dir):
-        """Get list of available Chrome profiles with their names"""
-        try:
-            profiles = []
-            profile_names = {}
-            
-            # Read Local State file to get profile names
-            local_state_path = os.path.join(user_data_dir, 'Local State')
-            if os.path.exists(local_state_path):
-                with open(local_state_path, 'r', encoding='utf-8') as f:
-                    local_state = json.load(f)
-                    info_cache = local_state.get('profile', {}).get('info_cache', {})
-                    for profile_dir, info in info_cache.items():
-                        profile_dir = profile_dir.replace('\\', '/')
-                        if profile_dir == 'Default':
-                            profile_names['Default'] = info.get('name', 'Default')
-                        elif profile_dir.startswith('Profile '):
-                            profile_names[profile_dir] = info.get('name', profile_dir)
-
-            # Get list of profile directories
-            for item in os.listdir(user_data_dir):
-                if item == 'Default' or (item.startswith('Profile ') and os.path.isdir(os.path.join(user_data_dir, item))):
-                    profiles.append((item, profile_names.get(item, item)))
-            return sorted(profiles)
-        except Exception as e:
-            print(f"{Fore.RED}{EMOJI['ERROR']} {self.translator.get('chrome_profile.error_loading', error=str(e)) if self.translator else f'Error loading Chrome profiles: {e}'}{Style.RESET_ALL}")
-            return []
+        return get_available_profiles(user_data_dir)
 
     def _select_profile(self):
-        """Select a Chrome profile to use"""
-        try:
-            # Get available profiles
-            profiles = self._get_available_profiles(self._get_user_data_directory())
-            if not profiles:
-                print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('chrome_profile.no_profiles') if self.translator else 'No Chrome profiles found'}{Style.RESET_ALL}")
-                return False
-
-            # Display available profiles
-            print(f"\n{Fore.CYAN}{EMOJI['INFO']} {self.translator.get('chrome_profile.select_profile') if self.translator else 'Select a Chrome profile to use:'}{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}{self.translator.get('chrome_profile.profile_list') if self.translator else 'Available profiles:'}{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}0. {self.translator.get('menu.exit') if self.translator else 'Exit'}{Style.RESET_ALL}")
-            for i, (dir_name, display_name) in enumerate(profiles, 1):
-                print(f"{Fore.CYAN}{i}. {display_name} ({dir_name}){Style.RESET_ALL}")
-
-            # Get user selection
-            while True:
-                try:
-                    choice = int(input(f"\n{Fore.CYAN}{self.translator.get('menu.input_choice', choices=f'0-{len(profiles)}') if self.translator else f'Please enter your choice (0-{len(profiles)}): '}{Style.RESET_ALL}"))
-                    if choice == 0:  # Add quit 
-                        print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('menu.exiting') if self.translator else 'Exiting profile selection...'}{Style.RESET_ALL}")
-                        return False
-                    elif 1 <= choice <= len(profiles):
-                        self.selected_profile = profiles[choice - 1][0]
-                        print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {self.translator.get('chrome_profile.profile_selected', profile=self.selected_profile) if self.translator else f'Selected profile: {self.selected_profile}'}{Style.RESET_ALL}")
-                        return True
-                    else:
-                        print(f"{Fore.RED}{EMOJI['ERROR']} {self.translator.get('chrome_profile.invalid_selection') if self.translator else 'Invalid selection. Please try again.'}{Style.RESET_ALL}")
-                except ValueError:
-                    print(f"{Fore.RED}{EMOJI['ERROR']} {self.translator.get('chrome_profile.invalid_selection') if self.translator else 'Invalid selection. Please try again.'}{Style.RESET_ALL}")
-            
-        except Exception as e:
-            print(f"{Fore.RED}{EMOJI['ERROR']} {self.translator.get('chrome_profile.error_loading', error=str(e)) if self.translator else f'Error loading Chrome profiles: {e}'}{Style.RESET_ALL}")
+        picked = chrome_select_profile(self.translator)
+        if not picked:
             return False
+        self.selected_profile = picked[0]
+        return True
         
     def setup_browser(self):
         """Setup browser for OAuth flow using selected profile"""
@@ -159,134 +114,16 @@ class OAuthHandler:
             return False
 
     def _kill_browser_processes(self):
-        """Kill existing browser processes based on platform"""
-        try:
-            if os.name == 'nt':  # Windows
-                processes = ['chrome.exe', 'chromium.exe']
-                for proc in processes:
-                    os.system(f'taskkill /f /im {proc} >nul 2>&1')
-            else:  # Linux/Mac
-                processes = ['chrome', 'chromium', 'chromium-browser']
-                for proc in processes:
-                    os.system(f'pkill -f {proc} >/dev/null 2>&1')
-            
-            time.sleep(1)  # Wait for processes to close
-        except Exception as e:
-            print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('oauth.warning_could_not_kill_existing_browser_processes', error=str(e)) if self.translator else f'Warning: Could not kill existing browser processes: {e}'}{Style.RESET_ALL}")
+        kill_browser_processes()
 
     def _get_user_data_directory(self):
-        """Get the appropriate user data directory based on platform"""
-        try:
-            if os.name == 'nt':  # Windows
-                possible_paths = [
-                    os.path.expandvars(r'%LOCALAPPDATA%\Google\Chrome\User Data'),
-                    os.path.expandvars(r'%LOCALAPPDATA%\Chromium\User Data')
-                ]
-            elif sys.platform == 'darwin':  # macOS
-                possible_paths = [
-                    os.path.expanduser('~/Library/Application Support/Google/Chrome'),
-                    os.path.expanduser('~/Library/Application Support/Chromium')
-                ]
-            else:  # Linux
-                possible_paths = [
-                    os.path.expanduser('~/.config/google-chrome'),
-                    os.path.expanduser('~/.config/chromium'),
-                    '/usr/bin/google-chrome',
-                    '/usr/bin/chromium-browser'
-                ]
-            
-            # Try each possible path
-            for path in possible_paths:
-                if os.path.exists(path):
-                    return path
-            
-            # Create temporary profile if no existing profile found
-            temp_profile = os.path.join(os.path.expanduser('~'), '.cursor_temp_profile')
-            print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('oauth.creating_temporary_profile', path=temp_profile) if self.translator else f'Creating temporary profile at: {temp_profile}'}{Style.RESET_ALL}")
-            os.makedirs(temp_profile, exist_ok=True)
-            return temp_profile
-            
-        except Exception as e:
-            print(f"{Fore.RED}{EMOJI['ERROR']} {self.translator.get('oauth.error_getting_user_data_directory', error=str(e)) if self.translator else f'Error getting user data directory: {e}'}{Style.RESET_ALL}")
-            raise
+        return get_user_data_directory()
 
     def _get_browser_path(self):
-        """Get the browser executable path based on platform"""
-        try:
-            # Try default path first
-            chrome_path = get_default_chrome_path()
-            if chrome_path and os.path.exists(chrome_path):
-                return chrome_path
-            
-            print(f"{Fore.YELLOW}{EMOJI['INFO']} {self.translator.get('oauth.searching_for_alternative_browser_installations') if self.translator else 'Searching for alternative browser installations...'}{Style.RESET_ALL}")
-            
-            # Platform-specific paths
-            if os.name == 'nt':  # Windows
-                alt_paths = [
-                    r'C:\Program Files\Google\Chrome\Application\chrome.exe',
-                    r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
-                    r'C:\Program Files\Chromium\Application\chrome.exe',
-                    os.path.expandvars(r'%ProgramFiles%\Google\Chrome\Application\chrome.exe'),
-                    os.path.expandvars(r'%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe')
-                ]
-            elif sys.platform == 'darwin':  # macOS
-                alt_paths = [
-                    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-                    '/Applications/Chromium.app/Contents/MacOS/Chromium',
-                    '~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-                    '~/Applications/Chromium.app/Contents/MacOS/Chromium'
-                ]
-            else:  # Linux
-                alt_paths = [
-                    '/usr/bin/google-chrome',
-                    '/usr/bin/chromium-browser',
-                    '/usr/bin/chromium',
-                    '/snap/bin/chromium',
-                    '/usr/local/bin/chrome',
-                    '/usr/local/bin/chromium'
-                ]
-            
-            # Try each alternative path
-            for path in alt_paths:
-                expanded_path = os.path.expanduser(path)
-                if os.path.exists(expanded_path):
-                    print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {self.translator.get('oauth.found_browser_at', path=expanded_path) if self.translator else f'Found browser at: {expanded_path}'}{Style.RESET_ALL}")
-                    return expanded_path
-            
-            return None
-            
-        except Exception as e:
-            print(f"{Fore.RED}{EMOJI['ERROR']} {self.translator.get('oauth.error_finding_browser_path', error=str(e)) if self.translator else f'Error finding browser path: {e}'}{Style.RESET_ALL}")
-            return None
+        return get_browser_path()
 
     def _configure_browser_options(self, chrome_path, user_data_dir, active_profile):
-        """Configure browser options based on platform"""
-        try:
-            co = ChromiumOptions()
-            co.set_paths(browser_path=chrome_path, user_data_path=user_data_dir)
-            co.set_argument(f'--profile-directory={active_profile}')
-            
-            # Basic options
-            co.set_argument('--no-first-run')
-            co.set_argument('--no-default-browser-check')
-            co.set_argument('--disable-gpu')
-            
-            # Platform-specific options
-            if sys.platform.startswith('linux'):
-                co.set_argument('--no-sandbox')
-                co.set_argument('--disable-dev-shm-usage')
-                co.set_argument('--disable-setuid-sandbox')
-            elif sys.platform == 'darwin':
-                co.set_argument('--disable-gpu-compositing')
-            elif os.name == 'nt':
-                co.set_argument('--disable-features=TranslateUI')
-                co.set_argument('--disable-features=RendererCodeIntegrity')
-            
-            return co
-            
-        except Exception as e:
-            print(f"{Fore.RED}{EMOJI['ERROR']} {self.translator.get('oauth.error_configuring_browser_options', error=str(e)) if self.translator else f'Error configuring browser options: {e}'}{Style.RESET_ALL}")
-            raise
+        return configure_browser_options(chrome_path, user_data_dir, active_profile)
 
     def handle_google_auth(self):
         """Handle Google OAuth authentication"""
@@ -856,7 +693,7 @@ def main(auth_type, translator=None):
         ):
             print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {translator.get('oauth.auth_update_success') if translator else 'Auth update success'}{Style.RESET_ALL}")
             try:
-                from vip_activate import patch_workbench_vip
+                from cursor_membership import patch_workbench_vip
                 patch_workbench_vip(translator)
             except Exception as e:
                 print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('vip.patch_skipped', error=str(e)) if translator else f'VIP UI patch skipped: {e}'}{Style.RESET_ALL}")

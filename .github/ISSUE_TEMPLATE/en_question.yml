@@ -19,7 +19,7 @@ body:
           required: true
         - label: I confirm that I need to raise questions and discuss problems, not Bug feedback or demand suggestions.
           required: true
-        - label: I have read [Github Issues](https://github.com/hovanhoa/cursor-free-vip/issues) and searched for existing [open issues](https://github.com/hovanhoa/cursor-free-vip/issues) and [closed issues](https://github.com/hovanhoa/cursor-free-vip/issues?q=is%3Aissue%20state%3Aclosed%20), and found no similar issues.
+        - label: I have read [Github Issues](https://github.com/hovanhoa/mino-vip/issues) and searched for existing [open issues](https://github.com/hovanhoa/mino-vip/issues) and [closed issues](https://github.com/hovanhoa/mino-vip/issues?q=is%3Aissue%20state%3Aclosed%20), and found no similar issues.
           required: true
           
   - type: dropdown
@@ -41,7 +41,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: What version of Cursor Free Vip are you running?
+      description: What version of MiNo VIP are you running?
       placeholder: For example v1.0.0
     validations:
       required: true

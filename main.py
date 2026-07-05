@@ -9,9 +9,14 @@ import locale
 import platform
 import requests
 import subprocess
-from config import get_config, force_update_config
+from branding import GITHUB_REPO, GITHUB_URL, env_get
+from config import get_config, force_update_config, save_user_language
+from icons import setup_console_encoding
+import icons as _icons
 import shutil
 import re
+
+setup_console_encoding()
 
 # Only import windll on Windows systems
 if platform.system() == 'Windows':
@@ -22,25 +27,26 @@ if platform.system() == 'Windows':
 # Initialize colorama
 init()
 
-# Define emoji and color constants
+# ASCII-safe console markers (Windows conhost compatible)
 EMOJI = {
-    "FILE": "📄",
-    "BACKUP": "💾",
-    "SUCCESS": "✅",
-    "ERROR": "❌",
-    "INFO": "ℹ️",
-    "RESET": "🔄",
-    "MENU": "📋",
-    "ARROW": "➜",
-    "LANG": "🌐",
-    "UPDATE": "🔄",
-    "ADMIN": "🔐",
-    "AIRDROP": "💰",
-    "ROCKET": "🚀",
-    "STAR": "⭐",
-    "SUN": "🌟",
-    "CONTRIBUTE": "🤝",
-    "SETTINGS": "⚙️"
+    "FILE": _icons.FILE,
+    "BACKUP": _icons.BACKUP,
+    "SUCCESS": _icons.SUCCESS,
+    "ERROR": _icons.ERROR,
+    "INFO": _icons.INFO,
+    "RESET": _icons.RESET,
+    "MENU": _icons.MENU,
+    "ARROW": _icons.ARROW,
+    "LANG": _icons.LANG,
+    "UPDATE": _icons.RESET,
+    "ADMIN": _icons.ADMIN,
+    "AIRDROP": _icons.SUCCESS,
+    "ROCKET": _icons.SUCCESS,
+    "STAR": _icons.SUCCESS,
+    "SUN": _icons.SUCCESS,
+    "CONTRIBUTE": _icons.SUCCESS,
+    "SETTINGS": _icons.MENU,
+    "OAUTH": _icons.OAUTH,
 }
 
 # Function to check if running as frozen executable
@@ -85,7 +91,7 @@ class Translator:
     
     def detect_system_language(self):
         """Detect system language and return corresponding language code"""
-        env_lang = os.getenv('CURSOR_FREE_VIP_LANG', '').strip().lower()
+        env_lang = env_get("LANG", legacy_env="CURSOR_FREE_VIP_LANG").strip().lower()
         if env_lang:
             return env_lang
 
@@ -252,119 +258,148 @@ class Translator:
 # Create translator instance
 translator = Translator()
 
+
+def _T(key: str, **kwargs) -> str:
+    """Translated string for current UI language."""
+    return translator.get(key, **kwargs)
+
+
+def render_mimo_account_status():
+    """Render panel 02 — MiMo Pro account summary (active slot + auth.json)."""
+    import json
+    import ui
+    from mimo_account_slots import extract_xiaomi_meta, list_slots
+    from mimo_paths import get_mimo_auth_path
+
+    slots_data = list_slots()
+    active = next((s for s in slots_data["slots"] if s.get("active")), None)
+    count = slots_data["count"]
+
+    auth_dict: dict = {}
+    auth_path = get_mimo_auth_path()
+    if os.path.isfile(auth_path):
+        try:
+            with open(auth_path, encoding="utf-8") as f:
+                auth_dict = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            auth_dict = {}
+
+    live_meta = extract_xiaomi_meta(auth_dict)
+    has_pro_key = bool((auth_dict.get("xiaomi") or {}).get("key"))
+
+    from chrome_profile import load_saved_profile
+
+    saved_chrome = load_saved_profile()
+    chrome_val = "—"
+    if saved_chrome:
+        profile_dir, display_name = saved_chrome
+        chrome_val = display_name if display_name != profile_dir else profile_dir
+        if display_name and display_name != profile_dir:
+            chrome_val = f"{display_name} ({profile_dir})"
+
+    labels = [
+        _T("dashboard.active_account"),
+        _T("dashboard.mimo_uid"),
+        _T("dashboard.api_key"),
+        _T("dashboard.chrome_profile"),
+        _T("dashboard.saved_slots"),
+        _T("dashboard.pro_status"),
+    ]
+    w = max(ui.display_width(x) for x in labels)
+
+    if active:
+        account_val = active.get("label") or active.get("chrome_display_name") or active.get("id", "")
+        uid_val = active.get("xiaomi_uid") or live_meta.get("uid") or "—"
+        key_val = active.get("key_prefix") or live_meta.get("key_prefix") or "—"
+    else:
+        account_val = _T("dashboard.no_active_slot")
+        uid_val = live_meta.get("uid") or "—"
+        key_val = live_meta.get("key_prefix") or "—"
+
+    if count == 0:
+        slots_val = _T("dashboard.slots_none")
+    elif count == 1:
+        slots_val = _T("dashboard.slots_one")
+    else:
+        slots_val = _T("dashboard.slots_many", count=count)
+
+    if has_pro_key:
+        pro_val = _T("dashboard.pro_authenticated")
+        pro_color = ui.OK
+        icon = ui.ICON_OK
+    elif count > 0:
+        pro_val = _T("dashboard.pro_slots_saved")
+        pro_color = ui.WARN
+        icon = ui.ICON_WARN
+    else:
+        pro_val = _T("dashboard.pro_not_logged_in")
+        pro_color = ui.ERR
+        icon = ui.ICON_ERROR
+
+    rows = [
+        ui.kv(labels[0], account_val, w, value_color=ui.TEXT if active else ui.WARN),
+        ui.kv(labels[1], uid_val or "—", w),
+        ui.kv(labels[2], key_val or _T("dashboard.none"), w, value_color=ui.OK if key_val else ui.WARN),
+        ui.kv(labels[3], chrome_val, w, value_color=ui.OK if saved_chrome else ui.WARN),
+        ui.kv(labels[4], slots_val, w, value_color=ui.OK if count else ui.DIM),
+        ui.kv(labels[5], pro_val, w, value_color=pro_color),
+    ]
+    if not has_pro_key and count == 0:
+        rows.append(ui.hint(_T("dashboard.hint_login")))
+
+    ui.panel(rows, number="02", title=_T("dashboard.account_summary").upper(), icon=icon)
+
+
 def print_menu():
-    """Print menu options"""
-    try:
-        config = get_config()
-        if config.getboolean('Utils', 'enabled_account_info'):
-            import cursor_acc_info
-            cursor_acc_info.display_account_info(translator)
-    except Exception as e:
-        print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('menu.account_info_error', error=str(e))}{Style.RESET_ALL}")
-    
-    print(f"\n{Fore.CYAN}{EMOJI['MENU']} {translator.get('menu.title')}:{Style.RESET_ALL}")
-    if translator.current_language == 'zh_cn' or translator.current_language == 'zh_tw':
-        print(f"{Fore.YELLOW}{'─' * 70}{Style.RESET_ALL}")
-    else:
-        print(f"{Fore.YELLOW}{'─' * 110}{Style.RESET_ALL}")
-    
-    # Get terminal width
-    try:
-        terminal_width = shutil.get_terminal_size().columns
-    except:
-        terminal_width = 80  # Default width
-    
-    # Define all menu items
-    menu_items = {
-        0: f"{Fore.GREEN}0{Style.RESET_ALL}. {EMOJI['ERROR']} {translator.get('menu.exit')}",
-        1: f"{Fore.GREEN}1{Style.RESET_ALL}. {EMOJI['RESET']} {translator.get('menu.reset')}",
-        2: f"{Fore.GREEN}2{Style.RESET_ALL}. {EMOJI['SUCCESS']} {translator.get('menu.register')} ({Fore.RED}{translator.get('menu.outdate')}{Style.RESET_ALL})",
-        3: f"{Fore.GREEN}3{Style.RESET_ALL}. {EMOJI['SUN']} {translator.get('menu.register_google')} {EMOJI['ROCKET']} ({Fore.YELLOW}{translator.get('menu.lifetime_access_enabled')}{Style.RESET_ALL})",
-        4: f"{Fore.GREEN}4{Style.RESET_ALL}. {EMOJI['STAR']} {translator.get('menu.register_github')} {EMOJI['ROCKET']} ({Fore.YELLOW}{translator.get('menu.lifetime_access_enabled')}{Style.RESET_ALL})",
-        5: f"{Fore.GREEN}5{Style.RESET_ALL}. {EMOJI['SUCCESS']} {translator.get('menu.register_manual')}",
-        6: f"{Fore.GREEN}6{Style.RESET_ALL}. {EMOJI['RESET']} {translator.get('menu.temp_github_register')}",
-        7: f"{Fore.GREEN}7{Style.RESET_ALL}. {EMOJI['ERROR']} {translator.get('menu.quit')}",
-        8: f"{Fore.GREEN}8{Style.RESET_ALL}. {EMOJI['LANG']} {translator.get('menu.select_language')}",
-        9: f"{Fore.GREEN}9{Style.RESET_ALL}. {EMOJI['UPDATE']} {translator.get('menu.disable_auto_update')}",
-        10: f"{Fore.GREEN}10{Style.RESET_ALL}. {EMOJI['RESET']} {translator.get('menu.totally_reset')}",
-        11: f"{Fore.GREEN}11{Style.RESET_ALL}. {EMOJI['CONTRIBUTE']} {translator.get('menu.contribute')}",
-        12: f"{Fore.GREEN}12{Style.RESET_ALL}. {EMOJI['SETTINGS']}  {translator.get('menu.config')}",
-        13: f"{Fore.GREEN}13{Style.RESET_ALL}. {EMOJI['SETTINGS']}  {translator.get('menu.select_chrome_profile')}",
-        14: f"{Fore.GREEN}14{Style.RESET_ALL}. {EMOJI['ERROR']}  {translator.get('menu.delete_google_account', fallback='Delete Cursor Google Account')}",
-        15: f"{Fore.GREEN}15{Style.RESET_ALL}. {EMOJI['UPDATE']}  {translator.get('menu.bypass_version_check', fallback='Bypass Cursor Version Check')}",
-        16: f"{Fore.GREEN}16{Style.RESET_ALL}. {EMOJI['UPDATE']}  {translator.get('menu.check_user_authorized', fallback='Check User Authorized')}",
-        17: f"{Fore.GREEN}17{Style.RESET_ALL}. {EMOJI['UPDATE']}  {translator.get('menu.bypass_token_limit', fallback='Bypass Token Limit')}",
-        18: f"{Fore.GREEN}18{Style.RESET_ALL}. {EMOJI['STAR']}  {translator.get('menu.activate_vip', fallback='Activate VIP Account')}"
+    """Render panel 03 (actions menu)."""
+    import ui
+
+    labels = {
+        0: translator.get('menu.exit'),
+        1: translator.get('menu.select_language'),
+        2: translator.get('menu.select_chrome_profile'),
+        3: translator.get('menu.reset_mimo_machine'),
+        4: translator.get('menu.totally_reset_mimo'),
+        5: translator.get('menu.mimo_platform_login'),
+        6: translator.get('menu.mimo_manage_accounts'),
     }
-    
-    # Automatically calculate the number of menu items in the left and right columns
-    total_items = len(menu_items)
-    left_column_count = (total_items + 1) // 2  # The number of options displayed on the left (rounded up)
-    
-    # Build left and right columns of menus
-    sorted_indices = sorted(menu_items.keys())
-    left_menu = [menu_items[i] for i in sorted_indices[:left_column_count]]
-    right_menu = [menu_items[i] for i in sorted_indices[left_column_count:]]
-    
-    # Calculate the maximum display width of left menu items
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-    
-    def get_display_width(s):
-        """Calculate the display width of a string, considering Chinese characters and emojis"""
-        # Remove ANSI color codes
-        clean_s = ansi_escape.sub('', s)
-        width = 0
-        for c in clean_s:
-            # Chinese characters and some emojis occupy two character widths
-            if ord(c) > 127:
-                width += 2
-            else:
-                width += 1
-        return width
-    
-    max_left_width = 0
-    for item in left_menu:
-        width = get_display_width(item)
-        max_left_width = max(max_left_width, width)
-    
-    # Set the starting position of right menu
-    fixed_spacing = 4  # Fixed spacing
-    right_start = max_left_width + fixed_spacing
-    
-    # Calculate the number of spaces needed for right menu items
-    spaces_list = []
-    for i in range(len(left_menu)):
-        if i < len(left_menu):
-            left_item = left_menu[i]
-            left_width = get_display_width(left_item)
-            spaces = right_start - left_width
-            spaces_list.append(spaces)
-    
-    # Print menu items
-    max_rows = max(len(left_menu), len(right_menu))
-    
-    for i in range(max_rows):
-        # Print left menu items
-        if i < len(left_menu):
-            left_item = left_menu[i]
-            print(left_item, end='')
-            
-            # Use pre-calculated spaces
-            spaces = spaces_list[i]
-        else:
-            # If left side has no items, print only spaces
-            spaces = right_start
-            print('', end='')
-        
-        # Print right menu items
-        if i < len(right_menu):
-            print(' ' * spaces + right_menu[i])
-        else:
-            print()  # Change line
-    if translator.current_language == 'zh_cn' or translator.current_language == 'zh_tw':
-        print(f"{Fore.YELLOW}{'─' * 70}{Style.RESET_ALL}")
-    else:
-        print(f"{Fore.YELLOW}{'─' * 110}{Style.RESET_ALL}")
+
+    def cell(n):
+        return f"{ui.KEYNUM}[{n}]{ui.RESET} {ui.TEXT}{labels[n]}{ui.RESET}"
+
+    left_cells = [cell(i) for i in (0, 1, 2, 3)]
+    right_cells = [cell(i) for i in (4, 5, 6)]
+    left_w = max(ui.display_width(c) for c in left_cells)
+
+    rows = []
+    for i, left in enumerate(left_cells):
+        right = right_cells[i] if i < len(right_cells) else ""
+        gap = left_w - ui.display_width(left) + 4
+        rows.append(f"{left}{' ' * gap}{right}" if right else left)
+
+    title = _T("dashboard.action_menu")
+    ui.panel(rows, number="03", title=title.upper(), icon=ui.ICON_MENU)
+
+
+def _prompt_hint() -> str:
+    return _T("dashboard.prompt")
+
+
+def _show_help() -> None:
+    import ui
+    lines = [
+        ui.hint(_T("dashboard.help_menu5")),
+        ui.hint(_T("dashboard.help_menu6")),
+        ui.hint(_T("dashboard.help_reload")),
+        ui.hint(_T("dashboard.help_exit")),
+    ]
+    ui.panel(lines, title=_T("dashboard.help_title").upper(), icon=ui.ICON_INFO)
+
+
+def render_dashboard(*, run_update_check: bool = False) -> None:
+    """Draw panels 02–03 (MiMo account summary + menu)."""
+    render_mimo_account_status()
+    print_menu()
 
 def select_language():
     """Language selection menu"""
@@ -379,7 +414,11 @@ def select_language():
     try:
         choice = input(f"\n{EMOJI['ARROW']} {Fore.CYAN}{translator.get('menu.input_choice', choices=f'0-{len(languages)-1}')}: {Style.RESET_ALL}")
         if choice.isdigit() and 0 <= int(choice) < len(languages):
-            translator.set_language(languages[int(choice)])
+            lang_code = languages[int(choice)]
+            if translator.set_language(lang_code):
+                save_user_language(lang_code)
+                os.environ["MIMO_VIP_LANG"] = lang_code
+                os.environ["MINO_VIP_LANG"] = lang_code
             return True
         else:
             print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('menu.invalid_choice')}{Style.RESET_ALL}")
@@ -389,25 +428,22 @@ def select_language():
         return False
 
 def check_latest_version():
-    """Check if current version matches the latest release version"""
+    """Check the latest release; return a status dict for the system-status panel."""
     try:
-        print(f"\n{Fore.CYAN}{EMOJI['UPDATE']} {translator.get('updater.checking')}{Style.RESET_ALL}")
-        
         # Get latest version from GitHub API with timeout and proper headers
         headers = {
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'CursorFreeVIP-Updater'
+            'User-Agent': 'MiMoVIP-Updater'
         }
         response = requests.get(
-            "https://api.github.com/repos/hovanhoa/cursor-free-vip/releases/latest",
+            f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
             headers=headers,
             timeout=10
         )
         
         # Check if rate limit exceeded
         if response.status_code == 403 and "rate limit exceeded" in response.text.lower():
-            print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('updater.rate_limit_exceeded', fallback='GitHub API rate limit exceeded. Skipping update check.')}{Style.RESET_ALL}")
-            return
+            return ("fail", "GitHub API rate limit exceeded")
         
         # Check if response is successful
         if response.status_code != 200:
@@ -448,7 +484,7 @@ def check_latest_version():
             
             # get and show changelog
             try:
-                changelog_url = "https://raw.githubusercontent.com/hovanhoa/cursor-free-vip/main/CHANGELOG.md"
+                changelog_url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/CHANGELOG.md"
                 changelog_response = requests.get(changelog_url, timeout=10)
                 
                 if changelog_response.status_code == 200:
@@ -489,19 +525,18 @@ def check_latest_version():
                 if choice in ['', 'y', 'yes']:
                     break
                 elif choice in ['n', 'no']:
-                    print(f"\n{Fore.YELLOW}{EMOJI['INFO']} {translator.get('updater.update_skipped')}{Style.RESET_ALL}")
-                    return
+                    return ("update", latest_version)
                 else:
                     print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('menu.invalid_choice')}{Style.RESET_ALL}")
             
             try:
                 # Execute update command based on platform
                 if platform.system() == 'Windows':
-                    update_command = 'irm https://raw.githubusercontent.com/hovanhoa/cursor-free-vip/main/scripts/install.ps1 | iex'
+                    update_command = f'irm https://raw.githubusercontent.com/{GITHUB_REPO}/main/scripts/install.ps1 | iex'
                     subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', update_command], check=True)
                 else:
                     # For Linux/Mac, download and execute the install script
-                    install_script_url = 'https://raw.githubusercontent.com/hovanhoa/cursor-free-vip/main/scripts/install.sh'
+                    install_script_url = f'https://raw.githubusercontent.com/{GITHUB_REPO}/main/scripts/install.sh'
                     
                     # First verify the script exists
                     script_response = requests.get(install_script_url, timeout=5)
@@ -523,25 +558,18 @@ def check_latest_version():
                 sys.exit(0)
                 
             except Exception as update_error:
-                print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('updater.update_failed', error=str(update_error))}{Style.RESET_ALL}")
-                print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('updater.manual_update_required')}{Style.RESET_ALL}")
-                return
+                return ("update", latest_version)
         else:
             # If current version is newer or equal to latest version
             if current_version_tuple > latest_version_tuple:
-                print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {translator.get('updater.development_version', current=version, latest=latest_version)}{Style.RESET_ALL}")
-            else:
-                print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {translator.get('updater.up_to_date')}{Style.RESET_ALL}")
-            
+                return ("dev", f"v{version} > v{latest_version}")
+            return ("ok", f"v{version}")
+
     except requests.exceptions.RequestException as e:
-        print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('updater.network_error', error=str(e))}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('updater.continue_anyway')}{Style.RESET_ALL}")
-        return
-        
+        return ("network", str(e))
+
     except Exception as e:
-        print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('updater.check_failed', error=str(e))}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('updater.continue_anyway')}{Style.RESET_ALL}")
-        return
+        return ("fail", str(e))
 
 def main():
     # Check for admin privileges if running as executable on Windows only
@@ -552,118 +580,79 @@ def main():
         else:
             print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('menu.admin_required_continue')}{Style.RESET_ALL}")
     
-    print_logo()
-    
     # Initialize configuration
     config = get_config(translator)
     if not config:
         print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('menu.config_init_failed')}{Style.RESET_ALL}")
         return
-    if not os.getenv('CURSOR_FREE_VIP_LANG') and config.has_option('Utils', 'language'):
+    if config.has_option('Utils', 'language'):
         config_lang = config.get('Utils', 'language').strip().lower()
         if config_lang:
             translator.set_language(config_lang)
+    env_lang = env_get("LANG", legacy_env="CURSOR_FREE_VIP_LANG")
+    if env_lang:
+        translator.set_language(env_lang)
+    print_logo(translator)
     force_update_config(translator)
 
     if config.getboolean('Utils', 'enabled_update_check'):
-        check_latest_version()  # Add version check before showing menu
-    print_menu()
-    
+        check_latest_version()
+
+    render_dashboard()
+
+    import ui
     while True:
         try:
-            choice_num = 18
-            choice = input(f"\n{EMOJI['ARROW']} {Fore.CYAN}{translator.get('menu.input_choice', choices=f'0-{choice_num}')}: {Style.RESET_ALL}")
+            choice = ui.read_prompt(_prompt_hint()).lower()
+            if choice in ('q', 'quit', 'exit'):
+                print(f"\n{Fore.YELLOW}{EMOJI['INFO']} {translator.get('menu.exit')}...{Style.RESET_ALL}")
+                return
+            if choice == 'h':
+                _show_help()
+                continue
+            if choice == 'r':
+                render_dashboard()
+                continue
 
             if choice == "0":
                 print(f"\n{Fore.YELLOW}{EMOJI['INFO']} {translator.get('menu.exit')}...{Style.RESET_ALL}")
                 print(f"{Fore.CYAN}{'═' * 50}{Style.RESET_ALL}")
                 return
             elif choice == "1":
-                import reset_machine_manual
-                reset_machine_manual.run(translator)
-                print_menu()
-            elif choice == "2":
-                import cursor_register
-                cursor_register.main(translator)
-                print_menu()
-            elif choice == "3":
-                import cursor_register_google
-                cursor_register_google.main(translator)
-                print_menu()
-            elif choice == "4":
-                import cursor_register_github
-                cursor_register_github.main(translator)
-                print_menu()
-            elif choice == "5":
-                import cursor_register_manual
-                cursor_register_manual.main(translator)
-                print_menu()
-            elif choice == "6":
-                import github_cursor_register
-                print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('menu.coming_soon')}{Style.RESET_ALL}")
-                # github_cursor_register.main(translator)
-                print_menu()
-            elif choice == "7":
-                import quit_cursor
-                quit_cursor.quit_cursor(translator)
-                print_menu()
-            elif choice == "8":
                 if select_language():
-                    print_menu()
+                    print_logo(translator)
+                    render_dashboard(run_update_check=False)
                 continue
-            elif choice == "9":
-                import disable_auto_update
-                disable_auto_update.run(translator)
-                print_menu()
-            elif choice == "10":
-                import totally_reset_cursor
-                totally_reset_cursor.run(translator)
-                # print(f"{Fore.YELLOW}{EMOJI['INFO']} {translator.get('menu.fixed_soon')}{Style.RESET_ALL}")
-                print_menu()
-            elif choice == "11":
-                import logo
-                print(logo.CURSOR_CONTRIBUTORS)
-                print_menu()
-            elif choice == "12":
-                from config import print_config
-                print_config(get_config(), translator)
-                print_menu()
-            elif choice == "13":
-                from oauth_auth import OAuthHandler
-                oauth = OAuthHandler(translator)
-                oauth._select_profile()
-                print_menu()
-            elif choice == "14":
-                import delete_cursor_google
-                delete_cursor_google.main(translator)
-                print_menu()
-            elif choice == "15":
-                import bypass_version
-                bypass_version.main(translator)
-                print_menu()
-            elif choice == "16":
-                import check_user_authorized
-                check_user_authorized.main(translator)
-                print_menu()
-            elif choice == "17":
-                import bypass_token_limit
-                bypass_token_limit.run(translator)
-                print_menu()
-            elif choice == "18":
-                import vip_activate
-                vip_activate.run(translator)
-                print_menu()
+            elif choice == "2":
+                import chrome_profile
+                chrome_profile.run(translator)
+                render_dashboard(run_update_check=False)
+            elif choice == "3":
+                import reset_mimo_machine
+                reset_mimo_machine.run(translator)
+                render_dashboard(run_update_check=False)
+            elif choice == "4":
+                import totally_reset_mimo
+                totally_reset_mimo.run(translator)
+                render_dashboard(run_update_check=False)
+            elif choice == "5":
+                import mimo_platform_login
+                mimo_platform_login.run(translator)
+                render_dashboard(run_update_check=False)
+            elif choice == "6":
+                import mimo_manage_accounts
+                mimo_manage_accounts.run(translator)
+                render_dashboard(run_update_check=False)
             else:
                 print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('menu.invalid_choice')}{Style.RESET_ALL}")
-                print_menu()
+                render_dashboard(run_update_check=False)
 
         except KeyboardInterrupt:
             print(f"\n{Fore.YELLOW}{EMOJI['INFO']} {translator.get('menu.program_terminated')}{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}{'═' * 50}{Style.RESET_ALL}")
             return
         except Exception as e:
             print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('menu.error_occurred', error=str(e))}{Style.RESET_ALL}")
-            print_menu()
+            render_dashboard(run_update_check=False)
 
 if __name__ == "__main__":
     main()

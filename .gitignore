@@ -1,38 +1,44 @@
-__pycache__
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
 server/
 venv/
+ENV/
 check_license.py
 cursor_modifier.py
 reset_machine.py
 Run_Venv.bat
 token_monitor.py
 get_mac.py
-.gitignore
 build.bat
 build.mac.command
 build.py
 build.sh
-ENV/
 test.py
 new_tempemail_smail.py
 new_tempemail_api.py
-
 install.bat
 run.bat
-
 temp_account_info.txt
+credentials.txt
+cursor_accounts.txt
+recaptcha.py
+install_requirements.bat
 
-.env copy
+# Environment (use .env.example as template)
+.env
+.env.*
+!.env.example
+
+# Node / MiMo CLI bundle
+node_modules/
+mimo/node_modules/
 
 # PyInstaller
 build/
 dist/
 *.spec2
-
-credentials.txt
-cursor_accounts.txt
-recaptcha.py
-install_requirements.bat
 
 # IDE
 .idea/
@@ -51,3 +57,13 @@ Thumbs.db
 
 # Mac
 run_venv.mac.command
+
+# Local dev scratch (one-off patch probes)
+find_je_call.py
+find_workbench_patterns.py
+get_original_patterns.py
+check_patterns.py
+scripts/count_sync_targets.py
+scripts/extract_patch_strings.py
+scripts/extract_patch_strings2.py
+scripts/rescan_workbench.py
