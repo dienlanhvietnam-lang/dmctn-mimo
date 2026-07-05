@@ -49,7 +49,7 @@ def _backup_file(path: str, backup_dir: str) -> None:
     shutil.copy2(path, os.path.join(backup_dir, name))
 
 
-def reset_mimo_machine(translator=None, clear_auth: bool = True, skip_backup: bool = False) -> bool:
+def reset_mimo_machine(translator=None, clear_auth: bool = True, skip_backup: bool = False, skip_slot_backup: bool = False) -> bool:
     data_dir = get_mimo_data_dir()
     os.makedirs(data_dir, exist_ok=True)
 
@@ -78,7 +78,7 @@ def reset_mimo_machine(translator=None, clear_auth: bool = True, skip_backup: bo
     if clear_auth:
         auth_path = identity_files["auth.json"]
         if os.path.isfile(auth_path):
-            if has_xiaomi_auth(auth_path):
+            if has_xiaomi_auth(auth_path) and not skip_slot_backup:
                 try:
                     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
                     slot = backup_active_auth_to_slot(label=f"auto-backup-before-reset-{ts}")

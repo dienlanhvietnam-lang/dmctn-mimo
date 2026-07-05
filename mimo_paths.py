@@ -49,6 +49,16 @@ def get_mimo_protected_dirs() -> list[str]:
     return ["accounts"]
 
 
+def get_mimo_deep_wipe_extra() -> list[str]:
+    """Extra paths wiped only by menu 7 (deep reset): slots + .config/mimocode."""
+    extras = [get_mimo_accounts_dir()]
+    config_dir = get_mimo_config_dir()
+    data_dir = get_mimo_data_dir()
+    if os.path.normcase(os.path.abspath(config_dir)) != os.path.normcase(os.path.abspath(data_dir)):
+        extras.append(config_dir)
+    return extras
+
+
 def get_mimo_database_files() -> list[str]:
     data_dir = get_mimo_data_dir()
     return [

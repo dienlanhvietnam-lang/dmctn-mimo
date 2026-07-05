@@ -25,7 +25,8 @@
         "reset_mimo_machine": "Đặt Lại ID Máy MiMo CLI",
         "totally_reset_mimo": "Đặt Lại Hoàn Toàn MiMo CLI",
         "mimo_platform_login": "Đăng Nhập MiMo Platform (Chrome profile)",
-        "mimo_manage_accounts": "Quản Lý Account MiMo"
+        "mimo_manage_accounts": "Quản Lý Account MiMo",
+        "deep_reset_mimo": "Reset Sâu MiMo (xóa slot + .config)"
     },
     "mimo_login": {
         "title": "Đăng Nhập MiMo Platform",
@@ -64,10 +65,11 @@
         "pro_slots_saved": "Có slot — kích hoạt menu 6",
         "pro_not_logged_in": "Chưa đăng nhập — menu 5",
         "hint_login": "Menu 5 = đăng nhập Platform · Menu 6 = quản lý slot",
-        "prompt": "Nhập lựa chọn [0-6], h=trợ giúp, r=tải lại, q=thoát:",
+        "prompt": "Nhập lựa chọn [0-7], h=trợ giúp, r=tải lại, q=thoát:",
         "help_title": "Trợ giúp",
         "help_menu5": "5 = Đăng nhập MiMo Platform (Chrome)",
         "help_menu6": "6 = Quản lý slot account MiMo Pro",
+        "help_menu7": "7 = Reset sâu — xóa slot + .config/mimocode + dữ liệu local",
         "help_reload": "r = Tải lại bảng điều khiển",
         "help_exit": "q / 0 = Thoát"
     },
@@ -363,6 +365,14 @@
         "remove_failed": "Không xóa được: {path}",
         "partial": "Một số thư mục bị khóa (đóng MiMo rồi xóa tay hoặc chạy lại):",
         "done": "Hoàn tất reset toàn bộ ({count} mục). Chạy lại mimo/start.bat."
+    },
+    "mimo_deep": {
+        "title": "Reset Sâu MiMo CLI",
+        "warning": "Xóa TOÀN BỘ slot, .config/mimocode, DB, memory, session, auth. Chỉ khôi phục từ backup.",
+        "confirm": "Gõ YES để xác nhận reset sâu: ",
+        "cancelled": "Đã hủy reset sâu.",
+        "extra": "Cũng xóa: accounts/ + .config/mimocode (nếu tách riêng)",
+        "done": "Reset sâu hoàn tất ({count} mục). Đăng nhập lại qua menu 5."
     },
     "mimo_reset": {
         "title": "Đặt Lại ID Máy MiMo",

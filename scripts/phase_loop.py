@@ -54,8 +54,10 @@ CORE_MODULES = [
 LOCALE_KEYS = [
     "menu.mimo_platform_login",
     "menu.mimo_manage_accounts",
+    "menu.deep_reset_mimo",
     "mimo_slots.title",
     "mimo_login.title",
+    "mimo_deep.title",
 ]
 
 

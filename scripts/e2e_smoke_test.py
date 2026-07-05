@@ -173,6 +173,19 @@ def test_mimo_wipe_protects_accounts():
         assert not any(p.endswith(name) for p in wipe_dirs), f"{name} must not be wiped"
 
 
+def test_mimo_deep_wipe_includes_slots_and_config():
+    import os
+    from mimo_paths import get_mimo_accounts_dir, get_mimo_config_dir, get_mimo_data_dir, get_mimo_deep_wipe_extra
+
+    extras = get_mimo_deep_wipe_extra()
+    assert get_mimo_accounts_dir() in extras
+    config_dir = get_mimo_config_dir()
+    data_dir = get_mimo_data_dir()
+    if os.path.normcase(os.path.abspath(config_dir)) != os.path.normcase(os.path.abspath(data_dir)):
+        assert config_dir in extras
+    assert len(extras) >= 1
+
+
 def test_12_mimo_reset_helpers():
     from machine_id_utils import generate_mimo_client_ids, generate_telemetry_ids
     from mimo_paths import get_mimo_data_dir, get_mimo_identity_files
@@ -368,6 +381,7 @@ def main():
         ("mimo_paths accounts dir", test_mimo_paths_accounts_dir),
         ("mimo_account_slots crud", test_mimo_account_slots_crud),
         ("mimo wipe protects accounts", test_mimo_wipe_protects_accounts),
+        ("mimo deep wipe extras", test_mimo_deep_wipe_includes_slots_and_config),
         ("12 mimo_reset helpers", test_12_mimo_reset_helpers),
         ("13 mimo_total helpers", test_13_mimo_total_helpers),
         ("mimo_auto setup", test_mimo_auto_setup),

@@ -37,7 +37,8 @@
         "reset_mimo_machine": "Reset MiMo CLI Machine ID",
         "totally_reset_mimo": "Totally Reset MiMo CLI",
         "mimo_platform_login": "MiMo Platform Login (Chrome profile)",
-        "mimo_manage_accounts": "Manage MiMo Accounts"
+        "mimo_manage_accounts": "Manage MiMo Accounts",
+        "deep_reset_mimo": "Deep Reset MiMo (slots + .config)"
     },
     "mimo_login": {
         "title": "MiMo Platform Login",
@@ -76,10 +77,11 @@
         "pro_slots_saved": "Slots saved — activate in menu 6",
         "pro_not_logged_in": "Not logged in — use menu 5",
         "hint_login": "Menu 5 = Platform login · Menu 6 = manage slots",
-        "prompt": "Enter choice [0-6], h=help, r=reload, q=quit:",
+        "prompt": "Enter choice [0-7], h=help, r=reload, q=quit:",
         "help_title": "Help",
         "help_menu5": "5 = MiMo Platform login (Chrome)",
         "help_menu6": "6 = Manage MiMo Pro account slots",
+        "help_menu7": "7 = Deep reset — wipe slots + .config/mimocode + local data",
         "help_reload": "r = Reload dashboard",
         "help_exit": "q / 0 = Exit"
     },
@@ -801,6 +803,14 @@
         "remove_failed": "Could not remove: {path}",
         "partial": "Some paths are locked (close MiMo and retry or delete manually):",
         "done": "Totally reset complete ({count} items removed). Run mimo/start.bat again."
+    },
+    "mimo_deep": {
+        "title": "Deep Reset MiMo CLI",
+        "warning": "Deletes ALL slots, .config/mimocode, DB, memory, sessions, and auth. Restore only from backup.",
+        "confirm": "Type YES to confirm deep reset: ",
+        "cancelled": "Deep reset cancelled.",
+        "extra": "Also removing: accounts/ + .config/mimocode (if separate)",
+        "done": "Deep reset complete ({count} items removed). Re-login via menu 5."
     },
     "mimo_reset": {
         "title": "Reset MiMo Machine ID",

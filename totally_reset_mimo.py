@@ -14,6 +14,7 @@ from colorama import Fore, Style, init
 from mimo_paths import (
     get_mimo_data_dir,
     get_mimo_database_files,
+    get_mimo_deep_wipe_extra,
     get_mimo_identity_files,
     get_mimo_protected_dirs,
     get_mimo_wipe_dirs,
@@ -112,19 +113,30 @@ def _remove_path(path: str) -> None:
         os.remove(path)
 
 
-def totally_reset_mimo(translator=None) -> bool:
+def totally_reset_mimo(translator=None, *, deep: bool = False) -> bool:
     data_dir = get_mimo_data_dir()
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir, exist_ok=True)
 
     print(f"\n{Fore.CYAN}{'=' * 50}{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{EMOJI['RESET']} {_msg(translator, 'mimo_total.title', 'Totally Reset MiMo CLI')}{Style.RESET_ALL}")
+    if deep:
+        print(f"{Fore.CYAN}{EMOJI['RESET']} {_msg(translator, 'mimo_deep.title', 'Deep Reset MiMo CLI (slots + config)')}{Style.RESET_ALL}")
+    else:
+        print(f"{Fore.CYAN}{EMOJI['RESET']} {_msg(translator, 'mimo_total.title', 'Totally Reset MiMo CLI')}{Style.RESET_ALL}")
     print(f"{Fore.CYAN}{'=' * 50}{Style.RESET_ALL}")
-    print(f"{Fore.YELLOW}{EMOJI['WARNING']} {_msg(translator, 'mimo_total.warning', 'This deletes mimocode.db, memory, sessions, and auth. Cannot undo except from backup.')}{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{EMOJI['INFO']} {_msg(translator, 'mimo_total.accounts_protected', 'Protected: {dirs} (Pro account slots kept)', dirs=', '.join(get_mimo_protected_dirs()))}{Style.RESET_ALL}")
+
+    if deep:
+        print(f"{Fore.RED}{EMOJI['WARNING']} {_msg(translator, 'mimo_deep.warning', 'Deletes ALL slots, .config/mimocode, DB, memory, sessions, and auth. Cannot undo except from backup.')}{Style.RESET_ALL}")
+        confirm = input(f"{Fore.RED}{_msg(translator, 'mimo_deep.confirm', 'Type YES to confirm deep reset: ')}{Style.RESET_ALL}").strip()
+        if confirm != "YES":
+            print(f"{Fore.YELLOW}{EMOJI['INFO']} {_msg(translator, 'mimo_deep.cancelled', 'Deep reset cancelled.')}{Style.RESET_ALL}")
+            return False
+    else:
+        print(f"{Fore.YELLOW}{EMOJI['WARNING']} {_msg(translator, 'mimo_total.warning', 'This deletes mimocode.db, memory, sessions, and auth. Cannot undo except from backup.')}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}{EMOJI['INFO']} {_msg(translator, 'mimo_total.accounts_protected', 'Protected: {dirs} (Pro account slots kept)', dirs=', '.join(get_mimo_protected_dirs()))}{Style.RESET_ALL}")
 
     auth_path = get_mimo_identity_files()["auth.json"]
-    if has_xiaomi_auth(auth_path):
+    if not deep and has_xiaomi_auth(auth_path):
         try:
             backup = backup_active_auth_to_slot()
             if backup:
@@ -135,13 +147,28 @@ def totally_reset_mimo(translator=None) -> bool:
     quit_mimo_processes(translator)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_dir = os.path.join(data_dir, f"backup_mimo_total_{timestamp}")
+    backup_label = "mimo_deep" if deep else "mimo_total"
+    backup_dir = os.path.join(data_dir, f"backup_{backup_label}_{timestamp}")
     os.makedirs(backup_dir, exist_ok=True)
     print(f"{Fore.YELLOW}{EMOJI['BACKUP']} {_msg(translator, 'mimo_total.backup', 'Backup: {path}', path=backup_dir)}{Style.RESET_ALL}")
 
     targets = get_mimo_database_files() + get_mimo_wipe_files()
     for directory in get_mimo_wipe_dirs():
         targets.append(directory)
+    if deep:
+        targets.extend(get_mimo_deep_wipe_extra())
+        print(f"{Fore.CYAN}{EMOJI['INFO']} {_msg(translator, 'mimo_deep.extra', 'Also removing: accounts/ + .config/mimocode (if separate)')}{Style.RESET_ALL}")
+
+    # De-duplicate while preserving order
+    seen: set[str] = set()
+    unique_targets: list[str] = []
+    for path in targets:
+        norm = os.path.normcase(os.path.abspath(path))
+        if norm in seen:
+            continue
+        seen.add(norm)
+        unique_targets.append(path)
+    targets = unique_targets
 
     removed = 0
     failed: list[str] = []
@@ -160,14 +187,20 @@ def totally_reset_mimo(translator=None) -> bool:
             print(f"{Fore.YELLOW}  {exc}{Style.RESET_ALL}")
 
     print(f"{Fore.CYAN}{EMOJI['INFO']} {_msg(translator, 'mimo_total.identity', 'Applying new machine identity + registry...')}{Style.RESET_ALL}")
-    reset_mimo_machine(translator, clear_auth=True, skip_backup=True)
+    reset_mimo_machine(translator, clear_auth=True, skip_backup=True, skip_slot_backup=deep)
 
     if failed:
         print(f"\n{Fore.YELLOW}{EMOJI['WARNING']} {_msg(translator, 'mimo_total.partial', 'Some paths locked (close MiMo and retry or delete manually):')}{Style.RESET_ALL}")
         for item in failed:
             print(f"{Fore.YELLOW}  - {item}{Style.RESET_ALL}")
 
-    print(f"\n{Fore.GREEN}{EMOJI['SUCCESS']} {_msg(translator, 'mimo_total.done', 'Totally reset complete ({count} items removed). Run mimo/start.bat again.', count=removed)}{Style.RESET_ALL}")
+    done_key = "mimo_deep.done" if deep else "mimo_total.done"
+    done_fallback = (
+        "Deep reset complete ({count} items removed). Re-login via menu 5."
+        if deep
+        else "Totally reset complete ({count} items removed). Run mimo/start.bat again."
+    )
+    print(f"\n{Fore.GREEN}{EMOJI['SUCCESS']} {_msg(translator, done_key, done_fallback, count=removed)}{Style.RESET_ALL}")
     finish_mimo_reset_guidance(translator)
     return not failed
 
@@ -175,6 +208,14 @@ def totally_reset_mimo(translator=None) -> bool:
 def run(translator=None):
     try:
         totally_reset_mimo(translator)
+    except Exception as exc:
+        print(f"{Fore.RED}{EMOJI['ERROR']} {_msg(translator, 'menu.error_occurred', 'Error: {error}', error=str(exc))}{Style.RESET_ALL}")
+    input(f"{EMOJI['INFO']} {_msg(translator, 'reset.press_enter', 'Press Enter to continue...')}")
+
+
+def run_deep(translator=None):
+    try:
+        totally_reset_mimo(translator, deep=True)
     except Exception as exc:
         print(f"{Fore.RED}{EMOJI['ERROR']} {_msg(translator, 'menu.error_occurred', 'Error: {error}', error=str(exc))}{Style.RESET_ALL}")
     input(f"{EMOJI['INFO']} {_msg(translator, 'reset.press_enter', 'Press Enter to continue...')}")
