@@ -66,7 +66,12 @@ cd ..
 
 ### 3. Chạy dashboard
 
-**Windows**
+**Windows** — double-click hoặc terminal:
+
+| File | Mục đích |
+|------|----------|
+| `start.bat` | Mở dashboard MiMo FREE (`main.py`) |
+| `mimo.bat` | Gọi MiMo CLI từ thư mục gốc (tự `npm install` nếu thiếu) |
 
 ```bat
 start.bat
@@ -147,10 +152,15 @@ Biến môi trường (tùy chọn):
 
 ## Kiểm tra / phát triển
 
+Chạy trực tiếp bằng Python (không cần file `.bat` riêng):
+
 ```bash
 python scripts/e2e_smoke_test.py --json
 python scripts/phase_loop.py --json
+python scripts/phase_loop.py --fix --loop   # auto-fix đến khi pass (tùy chọn)
 ```
+
+Đóng gói `.exe` (maintainer, Windows): `python build.py` (cần PyInstaller + `build.spec`).
 
 ## Báo lỗi & đóng góp
 
