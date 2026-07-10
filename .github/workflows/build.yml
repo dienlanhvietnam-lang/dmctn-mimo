@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # 获取所有标签
+          fetch-depth: 0
           
       - name: Delete existing tag if exists
         run: |

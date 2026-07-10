@@ -11,7 +11,7 @@ from colorama import Fore, Style, init
 from DrissionPage import ChromiumOptions, ChromiumPage
 
 import icons as _icons
-from utils import get_default_chrome_path, should_keep_cursor_running
+from utils import get_default_chrome_path, should_keep_chrome_running
 
 init()
 
@@ -53,7 +53,7 @@ def get_user_data_directory() -> str:
         if os.path.exists(path):
             return path
 
-    temp_profile = os.path.join(os.path.expanduser("~"), ".cursor_temp_profile")
+    temp_profile = os.path.join(os.path.expanduser("~"), ".mimo_temp_profile")
     os.makedirs(temp_profile, exist_ok=True)
     return temp_profile
 
@@ -314,7 +314,7 @@ def setup_browser(translator=None, profile_dir: str | None = None) -> ChromiumPa
         return None
 
     if not profile_dir:
-        if not should_keep_cursor_running():
+        if not should_keep_chrome_running():
             print(f"{Fore.YELLOW}{EMOJI['WARNING']} {_msg(translator, 'chrome_profile.warning_chrome_close', 'Warning: closes Chrome processes')}{Style.RESET_ALL}")
             if input(f"{Fore.YELLOW}{_msg(translator, 'menu.continue_prompt', 'Continue? (y/N): ')} {Style.RESET_ALL}").lower() != "y":
                 return None
@@ -324,7 +324,7 @@ def setup_browser(translator=None, profile_dir: str | None = None) -> ChromiumPa
             return None
         profile_dir, _ = picked
     else:
-        if not should_keep_cursor_running():
+        if not should_keep_chrome_running():
             kill_browser_processes()
 
     co = configure_browser_options(chrome_path, user_data_dir, profile_dir)

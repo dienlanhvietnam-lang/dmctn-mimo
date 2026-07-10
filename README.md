@@ -8,7 +8,7 @@ Bảng điều khiển CLI quản lý **MiMo CLI** (MiMoCode): đăng nhập Pla
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 [![Stars](https://img.shields.io/github/stars/dienlanhvietnam-lang/dmctn-mimo?style=flat-square&logo=github)](https://github.com/dienlanhvietnam-lang/dmctn-mimo/stargazers)
 
-**MiMo FREE v0.1 · Free MIMO 07/26**
+**MiMo FREE v2.0.0 · Free MIMO 07/26**
 
 </div>
 

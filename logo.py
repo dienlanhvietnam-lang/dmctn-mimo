@@ -6,7 +6,7 @@ from branding import APP_NAME
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(current_dir, ".env"))
-version = os.getenv("VERSION", "0.1")
+version = os.getenv("VERSION", "2.0.0")
 
 init()
 
@@ -26,7 +26,7 @@ def print_logo(translator=None):
         return value if value and value != key else fallback
 
     dash = _t("header.dashboard", "Bảng điều khiển")
-    product = _t("header.product_line", "MiMo FREE v0.1 • DMCTN")
+    product = _t("header.product_line", "MiMo FREE v2.0.0 • DMCTN")
     tagline = _t("header.tagline", "Free MIMO 07/26")
     lang_hint = _t("header.lang_hint", "Press 1 to change language")
 

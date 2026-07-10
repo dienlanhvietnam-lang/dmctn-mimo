@@ -1,4 +1,4 @@
-"""Shared machine / telemetry ID helpers for Cursor and MiMo resets."""
+"""Shared machine ID helpers for MiMo resets."""
 from __future__ import annotations
 
 import hashlib
@@ -6,18 +6,6 @@ import os
 import secrets
 import sys
 import uuid
-
-
-def generate_telemetry_ids(dev_device_id: str | None = None) -> dict[str, str]:
-    """Generate Cursor-style telemetry ID set."""
-    dev_device_id = dev_device_id or str(uuid.uuid4())
-    return {
-        "telemetry.devDeviceId": dev_device_id,
-        "telemetry.macMachineId": hashlib.sha512(os.urandom(64)).hexdigest(),
-        "telemetry.machineId": hashlib.sha256(os.urandom(32)).hexdigest(),
-        "telemetry.sqmId": "{" + str(uuid.uuid4()).upper() + "}",
-        "storage.serviceMachineId": dev_device_id,
-    }
 
 
 def generate_mimo_client_ids() -> dict[str, str]:

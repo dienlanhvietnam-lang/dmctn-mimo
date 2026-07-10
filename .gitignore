@@ -6,7 +6,6 @@ server/
 venv/
 ENV/
 check_license.py
-cursor_modifier.py
 reset_machine.py
 Run_Venv.bat
 token_monitor.py
@@ -22,7 +21,6 @@ install.bat
 run.bat
 temp_account_info.txt
 credentials.txt
-cursor_accounts.txt
 recaptcha.py
 install_requirements.bat
 
@@ -57,13 +55,3 @@ Thumbs.db
 
 # Mac
 run_venv.mac.command
-
-# Local dev scratch (one-off patch probes)
-find_je_call.py
-find_workbench_patterns.py
-get_original_patterns.py
-check_patterns.py
-scripts/count_sync_targets.py
-scripts/extract_patch_strings.py
-scripts/extract_patch_strings2.py
-scripts/rescan_workbench.py

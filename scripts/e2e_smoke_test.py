@@ -181,16 +181,13 @@ def test_mimo_deep_wipe_includes_slots_and_config():
 
 
 def test_12_mimo_reset_helpers():
-    from machine_id_utils import generate_mimo_client_ids, generate_telemetry_ids
+    from machine_id_utils import generate_mimo_client_ids
     from mimo_paths import get_mimo_data_dir, get_mimo_identity_files
 
     mimo_ids = generate_mimo_client_ids()
     assert len(mimo_ids["mimo-free-client"]) == 64
     assert len(mimo_ids["installation_id"]) == 36
     assert mimo_ids["mimo-key-name"].startswith("mimo-code-cli-key-")
-
-    telemetry = generate_telemetry_ids()
-    assert len(telemetry["telemetry.machineId"]) == 64
 
     files = get_mimo_identity_files()
     assert "installation_id" in files
