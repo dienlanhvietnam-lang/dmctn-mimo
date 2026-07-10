@@ -152,10 +152,6 @@ python scripts/e2e_smoke_test.py --json
 python scripts/phase_loop.py --json
 ```
 
-## Tài liệu nội bộ
-
-- [docs/AGENT-MIMO-GUIDE.md](docs/AGENT-MIMO-GUIDE.md) — hướng dẫn agent (MiMo login, slot, reset)
-
 ## Báo lỗi & đóng góp
 
 - Issues: [github.com/dienlanhvietnam-lang/dmctn-mimo/issues](https://github.com/dienlanhvietnam-lang/dmctn-mimo/issues)
