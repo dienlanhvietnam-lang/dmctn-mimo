@@ -80,3 +80,10 @@ def get_mimo_wipe_dirs() -> list[str]:
 def get_mimo_wipe_files() -> list[str]:
     data_dir = get_mimo_data_dir()
     return [os.path.join(data_dir, "trusted-workspaces.json")]
+
+
+def get_dmctn_protected_paths() -> list[str]:
+    """DMCTN-owned paths that must never be wiped with mimocode data."""
+    from mimo_context_paths import get_context_vault_dir
+
+    return [get_context_vault_dir()]

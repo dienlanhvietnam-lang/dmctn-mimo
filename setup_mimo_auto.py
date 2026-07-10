@@ -27,7 +27,7 @@ def build_auto_provider_config(preserve_ollama: dict[str, Any] | None = None) ->
         providers["ollama"] = preserve_ollama
     # Do NOT define partial `mimo` provider here — built-in plugin fills provider.mimo when absent.
     return {
-        "$schema": "https://opencode.ai/config.json",
+        "$schema": "https://mimo.xiaomi.com/mimocode/config.json",
         "provider": providers,
         "agent": {
             "local": {
@@ -37,6 +37,10 @@ def build_auto_provider_config(preserve_ollama: dict[str, Any] | None = None) ->
             },
             "build": {
                 "model": "mimo/mimo-auto",
+                # Block subagent spawn — avoids actor tool schema errors on MiMo Auto (issues #417, #561)
+                "permission": {
+                    "task": {"*": "deny"},
+                },
             },
         },
     }

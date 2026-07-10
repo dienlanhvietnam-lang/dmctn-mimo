@@ -256,12 +256,29 @@ def render_mimo_account_status():
         if display_name and display_name != profile_dir:
             chrome_val = f"{display_name} ({profile_dir})"
 
+    ctx_val = _T("dashboard.context_none")
+    try:
+        from mimo_context_vault import list_context_slots
+
+        ctx = list_context_slots()
+        if ctx["count"] == 0:
+            ctx_val = _T("dashboard.context_none")
+        else:
+            active_ctx = next((s for s in ctx["slots"] if s.get("active")), None)
+            if active_ctx:
+                ctx_val = _T("dashboard.context_active", label=active_ctx.get("label") or active_ctx.get("id"))
+            else:
+                ctx_val = _T("dashboard.slots_many", count=ctx["count"])
+    except Exception:
+        pass
+
     labels = [
         _T("dashboard.active_account"),
         _T("dashboard.mimo_uid"),
         _T("dashboard.api_key"),
         _T("dashboard.chrome_profile"),
         _T("dashboard.saved_slots"),
+        _T("dashboard.context_slots"),
         _T("dashboard.pro_status"),
     ]
     w = max(ui.display_width(x) for x in labels)
@@ -301,7 +318,8 @@ def render_mimo_account_status():
         ui.kv(labels[2], key_val or _T("dashboard.none"), w, value_color=ui.OK if key_val else ui.WARN),
         ui.kv(labels[3], chrome_val, w, value_color=ui.OK if saved_chrome else ui.WARN),
         ui.kv(labels[4], slots_val, w, value_color=ui.OK if count else ui.DIM),
-        ui.kv(labels[5], pro_val, w, value_color=pro_color),
+        ui.kv(labels[5], ctx_val, w, value_color=ui.OK if ctx_val != _T("dashboard.context_none") else ui.DIM),
+        ui.kv(labels[6], pro_val, w, value_color=pro_color),
     ]
     if not has_pro_key and count == 0:
         rows.append(ui.hint(_T("dashboard.hint_login")))
@@ -322,13 +340,14 @@ def print_menu():
         5: translator.get('menu.mimo_platform_login'),
         6: translator.get('menu.mimo_manage_accounts'),
         7: translator.get('menu.deep_reset_mimo'),
+        8: translator.get('menu.manage_context'),
     }
 
     def cell(n):
         return f"{ui.KEYNUM}[{n}]{ui.RESET} {ui.TEXT}{labels[n]}{ui.RESET}"
 
-    left_cells = [cell(i) for i in (0, 1, 2, 3)]
-    right_cells = [cell(i) for i in (4, 5, 6, 7)]
+    left_cells = [cell(i) for i in (0, 1, 2, 3, 4)]
+    right_cells = [cell(i) for i in (5, 6, 7, 8)]
     left_w = max(ui.display_width(c) for c in left_cells)
 
     rows = []
@@ -351,6 +370,7 @@ def _show_help() -> None:
         ui.hint(_T("dashboard.help_menu5")),
         ui.hint(_T("dashboard.help_menu6")),
         ui.hint(_T("dashboard.help_menu7")),
+        ui.hint(_T("dashboard.help_menu8")),
         ui.hint(_T("dashboard.help_reload")),
         ui.hint(_T("dashboard.help_exit")),
     ]
@@ -606,6 +626,10 @@ def main():
             elif choice == "7":
                 import totally_reset_mimo
                 totally_reset_mimo.run_deep(translator)
+                render_dashboard(run_update_check=False)
+            elif choice == "8":
+                import mimo_manage_context
+                mimo_manage_context.run(translator)
                 render_dashboard(run_update_check=False)
             else:
                 print(f"{Fore.RED}{EMOJI['ERROR']} {translator.get('menu.invalid_choice')}{Style.RESET_ALL}")

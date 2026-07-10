@@ -15,7 +15,8 @@
         "totally_reset_mimo": "Đặt Lại Hoàn Toàn MiMo CLI",
         "mimo_platform_login": "Đăng Nhập MiMo Platform (Chrome profile)",
         "mimo_manage_accounts": "Quản Lý Account MiMo",
-        "deep_reset_mimo": "Reset Sâu MiMo (xóa slot + .config)"
+        "deep_reset_mimo": "Reset Sâu MiMo (xóa slot + .config)",
+        "manage_context": "Quản Lý Ngữ Cảnh (Context Vault)"
     },
     "mimo_login": {
         "title": "Đăng Nhập MiMo Platform",
@@ -75,11 +76,15 @@
         "pro_slots_saved": "Có slot — kích hoạt menu 6",
         "pro_not_logged_in": "Chưa đăng nhập — menu 5",
         "hint_login": "Menu 5 = đăng nhập Platform · Menu 6 = quản lý slot",
-        "prompt": "Nhập lựa chọn [0-7], h=trợ giúp, r=tải lại, q=thoát:",
+        "prompt": "Nhập lựa chọn [0-8], h=trợ giúp, r=tải lại, q=thoát:",
+        "context_slots": "Ngữ cảnh đã lưu",
+        "context_none": "Chưa có — menu 8",
+        "context_active": "Đang dùng: {label}",
         "help_title": "Trợ giúp",
         "help_menu5": "5 = Đăng nhập MiMo Platform (Chrome)",
         "help_menu6": "6 = Quản lý slot account MiMo Pro",
         "help_menu7": "7 = Reset sâu — xóa slot + .config/mimocode + dữ liệu local",
+        "help_menu8": "8 = Quản lý Context Vault (snapshot/restore memory local)",
         "help_reload": "r = Tải lại bảng điều khiển",
         "help_exit": "q / 0 = Thoát"
     },
@@ -115,6 +120,17 @@
         "development_version": "Phiên bản phát triển {current} > {latest}",
         "changelog_title": "Nhật ký thay đổi"
     },
+    "mimo_deep": {
+        "title": "Reset Sâu MiMo CLI",
+        "warning": "Xóa TOÀN BỘ slot, .config/mimocode, DB, memory, session, auth. Chỉ khôi phục từ backup.",
+        "confirm": "Gõ YES để xác nhận reset sâu: ",
+        "cancelled": "Đã hủy reset sâu.",
+        "extra": "Cũng xóa: accounts/ + .config/mimocode (nếu tách riêng)",
+        "done": "Reset sâu hoàn tất ({count} mục). Đăng nhập lại qua menu 5.",
+        "wipe_vault_prompt": "Xóa luôn Context Vault (.dmctn-mimo/context)? (y/N): ",
+        "vault_wiped": "Đã xóa Context Vault ({count} slot)",
+        "vault_kept": "Giữ Context Vault (menu 8 để restore)"
+    },
     "mimo_total": {
         "title": "Đặt Lại Hoàn Toàn MiMo CLI",
         "warning": "Xóa mimocode.db, memory, session, auth. Chỉ khôi phục được từ backup.",
@@ -126,15 +142,9 @@
         "quit_mimo": "Đang đóng {count} tiến trình MiMo...",
         "remove_failed": "Không xóa được: {path}",
         "partial": "Một số thư mục bị khóa (đóng MiMo rồi xóa tay hoặc chạy lại):",
-        "done": "Hoàn tất reset toàn bộ ({count} mục). Chạy lại mimo/start.bat."
-    },
-    "mimo_deep": {
-        "title": "Reset Sâu MiMo CLI",
-        "warning": "Xóa TOÀN BỘ slot, .config/mimocode, DB, memory, session, auth. Chỉ khôi phục từ backup.",
-        "confirm": "Gõ YES để xác nhận reset sâu: ",
-        "cancelled": "Đã hủy reset sâu.",
-        "extra": "Cũng xóa: accounts/ + .config/mimocode (nếu tách riêng)",
-        "done": "Reset sâu hoàn tất ({count} mục). Đăng nhập lại qua menu 5."
+        "done": "Hoàn tất reset toàn bộ ({count} mục). Chạy lại mimo/start.bat.",
+        "snapshot_prompt": "Sao lưu ngữ cảnh local vào Context Vault trước khi xóa? (Y/n): ",
+        "restore_prompt": "Khôi phục ngữ cảnh từ vault sau reset? (Y/n): "
     },
     "mimo_reset": {
         "title": "Đặt Lại ID Máy MiMo",
@@ -154,7 +164,31 @@
         "next_restart": "Khởi động lại: mimo/start.bat",
         "401_hint": "401 Invalid API Key = đang dùng model Pro nhưng auth.json đã bị xóa sau reset",
         "auto_config": "Đã cấu hình MiMo Auto: {path}",
-        "done": "Hoàn tất reset MiMo."
+        "done": "Hoàn tất reset MiMo.",
+        "mode_preserve": "Reset đầy đủ + GIỮ ngữ cảnh local",
+        "mode_wipe": "Reset đầy đủ + XÓA ngữ cảnh",
+        "mode_registry_only": "Chỉ registry (giữ client ID + ngữ cảnh)",
+        "cancelled": "Đã hủy reset.",
+        "registry_skipped": "Bỏ qua cập nhật registry (chế độ test)"
+    },
+    "mimo_context": {
+        "title": "Quản Lý Ngữ Cảnh (Context Vault)",
+        "empty": "Chưa có snapshot ngữ cảnh. Dùng menu 3 (giữ context) hoặc tạo từ đây.",
+        "list_header": "Snapshot đã lưu ({count}):",
+        "active": "đang dùng",
+        "snapshot_ok": "Đã snapshot ngữ cảnh: {id}",
+        "restore_ok": "Đã khôi phục ngữ cảnh local: {id}",
+        "nothing_to_snapshot": "Không có ngữ cảnh local để snapshot",
+        "local_only_disclaimer": "Chỉ ngữ cảnh local — MiMo Auto trên server có thể không nhớ phiên cũ sau khi đổi client ID.",
+        "create": "Tạo snapshot ngay",
+        "activated": "Đã kích hoạt / restore → {id}",
+        "deleted": "Đã xóa snapshot",
+        "renamed": "Đã đổi nhãn",
+        "delete_confirm": "Xóa {label}? (y/N)",
+        "new_label": "Nhãn mới",
+        "pick": "Số snapshot",
+        "invalid": "Số snapshot không hợp lệ",
+        "mismatch_warn": "client_hash khác hiện tại — restore local vẫn được, server Auto có thể không nối phiên"
     },
     "oauth": {
         "no_compatible_browser_found": "Không tìm thấy trình duyệt tương thích. Cài Google Chrome hoặc Chromium."

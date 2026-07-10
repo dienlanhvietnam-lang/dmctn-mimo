@@ -113,7 +113,15 @@ def _remove_path(path: str) -> None:
         os.remove(path)
 
 
-def totally_reset_mimo(translator=None, *, deep: bool = False) -> bool:
+def totally_reset_mimo(
+    translator=None,
+    *,
+    deep: bool = False,
+    wipe_vault: bool | None = None,
+    auto_snapshot: bool | None = None,
+    auto_restore: bool | None = None,
+    skip_prompts: bool = False,
+) -> bool:
     data_dir = get_mimo_data_dir()
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir, exist_ok=True)
@@ -127,10 +135,11 @@ def totally_reset_mimo(translator=None, *, deep: bool = False) -> bool:
 
     if deep:
         print(f"{Fore.RED}{EMOJI['WARNING']} {_msg(translator, 'mimo_deep.warning', 'Deletes ALL slots, .config/mimocode, DB, memory, sessions, and auth. Cannot undo except from backup.')}{Style.RESET_ALL}")
-        confirm = input(f"{Fore.RED}{_msg(translator, 'mimo_deep.confirm', 'Type YES to confirm deep reset: ')}{Style.RESET_ALL}").strip()
-        if confirm != "YES":
-            print(f"{Fore.YELLOW}{EMOJI['INFO']} {_msg(translator, 'mimo_deep.cancelled', 'Deep reset cancelled.')}{Style.RESET_ALL}")
-            return False
+        if not skip_prompts:
+            confirm = input(f"{Fore.RED}{_msg(translator, 'mimo_deep.confirm', 'Type YES to confirm deep reset: ')}{Style.RESET_ALL}").strip()
+            if confirm != "YES":
+                print(f"{Fore.YELLOW}{EMOJI['INFO']} {_msg(translator, 'mimo_deep.cancelled', 'Deep reset cancelled.')}{Style.RESET_ALL}")
+                return False
     else:
         print(f"{Fore.YELLOW}{EMOJI['WARNING']} {_msg(translator, 'mimo_total.warning', 'This deletes mimocode.db, memory, sessions, and auth. Cannot undo except from backup.')}{Style.RESET_ALL}")
         print(f"{Fore.CYAN}{EMOJI['INFO']} {_msg(translator, 'mimo_total.accounts_protected', 'Protected: {dirs} (Pro account slots kept)', dirs=', '.join(get_mimo_protected_dirs()))}{Style.RESET_ALL}")
@@ -145,6 +154,24 @@ def totally_reset_mimo(translator=None, *, deep: bool = False) -> bool:
             print(f"{Fore.YELLOW}{EMOJI['WARNING']} slot backup: {exc}{Style.RESET_ALL}")
 
     quit_mimo_processes(translator)
+
+    # Optional context snapshot before wipe
+    snapshot_id = None
+    try:
+        from mimo_context_vault import create_context_snapshot, has_local_context
+
+        do_snap = auto_snapshot
+        if do_snap is None and not skip_prompts and has_local_context():
+            ans = input(f"{Fore.CYAN}{_msg(translator, 'mimo_total.snapshot_prompt', 'Snapshot local context to Context Vault before wipe? (Y/n): ')}{Style.RESET_ALL}").strip().lower()
+            do_snap = ans != "n"
+        elif do_snap is None:
+            do_snap = False
+        if do_snap and has_local_context():
+            result = create_context_snapshot(label=f"pre-total-{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+            snapshot_id = result["slot_id"]
+            print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {_msg(translator, 'mimo_context.snapshot_ok', 'Context snapshot: {id}', id=snapshot_id)}{Style.RESET_ALL}")
+    except Exception as exc:
+        print(f"{Fore.YELLOW}{EMOJI['WARNING']} context snapshot: {exc}{Style.RESET_ALL}")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_label = "mimo_deep" if deep else "mimo_total"
@@ -186,8 +213,39 @@ def totally_reset_mimo(translator=None, *, deep: bool = False) -> bool:
             print(f"{Fore.YELLOW}{EMOJI['WARNING']} {_msg(translator, 'mimo_total.remove_failed', 'Could not remove: {path}', path=rel)}{Style.RESET_ALL}")
             print(f"{Fore.YELLOW}  {exc}{Style.RESET_ALL}")
 
+    # Deep reset: optional vault wipe (default keep)
+    do_wipe_vault = wipe_vault
+    if deep and do_wipe_vault is None and not skip_prompts:
+        ans = input(f"{Fore.YELLOW}{_msg(translator, 'mimo_deep.wipe_vault_prompt', 'Also wipe Context Vault (.dmctn-mimo/context)? (y/N): ')}{Style.RESET_ALL}").strip().lower()
+        do_wipe_vault = ans == "y"
+    if deep and do_wipe_vault:
+        try:
+            from mimo_context_vault import wipe_context_vault
+
+            n = wipe_context_vault()
+            print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {_msg(translator, 'mimo_deep.vault_wiped', 'Context Vault wiped ({count} slots)', count=n)}{Style.RESET_ALL}")
+        except Exception as exc:
+            print(f"{Fore.YELLOW}{EMOJI['WARNING']} vault wipe: {exc}{Style.RESET_ALL}")
+    elif deep:
+        print(f"{Fore.CYAN}{EMOJI['INFO']} {_msg(translator, 'mimo_deep.vault_kept', 'Context Vault kept (use menu 8 to restore)')}{Style.RESET_ALL}")
+
     print(f"{Fore.CYAN}{EMOJI['INFO']} {_msg(translator, 'mimo_total.identity', 'Applying new machine identity + registry...')}{Style.RESET_ALL}")
     reset_mimo_machine(translator, clear_auth=True, skip_backup=True, skip_slot_backup=deep)
+
+    # Optional restore after wipe
+    do_restore = auto_restore
+    if do_restore is None and not skip_prompts and snapshot_id:
+        ans = input(f"{Fore.CYAN}{_msg(translator, 'mimo_total.restore_prompt', 'Restore context from vault after reset? (Y/n): ')}{Style.RESET_ALL}").strip().lower()
+        do_restore = ans != "n"
+    if do_restore and snapshot_id:
+        try:
+            from mimo_context_vault import restore_context_snapshot
+
+            restore_context_snapshot(snapshot_id)
+            print(f"{Fore.GREEN}{EMOJI['SUCCESS']} {_msg(translator, 'mimo_context.restore_ok', 'Local context restored: {id}', id=snapshot_id)}{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}{EMOJI['WARNING']} {_msg(translator, 'mimo_context.local_only_disclaimer', 'Local context only')}{Style.RESET_ALL}")
+        except Exception as exc:
+            print(f"{Fore.YELLOW}{EMOJI['WARNING']} context restore: {exc}{Style.RESET_ALL}")
 
     if failed:
         print(f"\n{Fore.YELLOW}{EMOJI['WARNING']} {_msg(translator, 'mimo_total.partial', 'Some paths locked (close MiMo and retry or delete manually):')}{Style.RESET_ALL}")

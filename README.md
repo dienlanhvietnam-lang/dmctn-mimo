@@ -16,13 +16,14 @@ Bảng điều khiển CLI quản lý **MiMo CLI** (MiMoCode): đăng nhập Pla
 
 ## Tính năng
 
-- Dashboard CLI (panel) — chọn thao tác bằng số `[0]`–`[7]`
+- Dashboard CLI (panel) — chọn thao tác bằng số `[0]`–`[8]`
 - **Đăng nhập MiMo Platform** qua Chrome profile + OAuth (`mimo providers login`)
 - **Quản lý slot** Pro động — lưu / kích hoạt / đổi tài khoản MiMo
+- **Context Vault** — snapshot / restore ngữ cảnh local (`memory`, DB)
 - **Chọn hồ sơ Chrome** mặc định cho OAuth
-- **Reset ID máy MiMo** — anonymous channel / MiMo Auto
-- **Reset hoàn toàn MiMo** — DB, memory, session, auth (giữ slot)
-- **Reset sâu** — xóa thêm slot + `.config/mimocode`
+- **Reset ID máy MiMo** — 3 chế độ (wipe / preserve context / registry only)
+- **Reset hoàn toàn MiMo** — DB, memory, session, auth (giữ slot; tùy chọn snapshot)
+- **Reset sâu** — xóa thêm slot + `.config/mimocode` (mặc định giữ vault)
 - Đa ngôn ngữ (vi, en)
 - Tự migrate config từ `.mimo-vip` / `.mino-vip` → `.dmctn-mimo`
 
@@ -33,11 +34,12 @@ Bảng điều khiển CLI quản lý **MiMo CLI** (MiMoCode): đăng nhập Pla
 | 0 | Thoát |
 | 1 | Đổi ngôn ngữ |
 | 2 | Chọn hồ sơ Chrome |
-| 3 | Đặt lại ID máy MiMo CLI |
+| 3 | Đặt lại ID máy MiMo CLI *(3 chế độ)* |
 | 4 | Đặt lại hoàn toàn MiMo CLI *(giữ slot)* |
 | 5 | Đăng nhập MiMo Platform |
 | 6 | Quản lý account MiMo |
 | 7 | Reset sâu *(xóa slot + `.config/mimocode`)* |
+| 8 | Quản lý Context Vault |
 
 ## Yêu cầu
 
@@ -103,23 +105,65 @@ Các shortcut trong `mimo/`:
 | `start.bat` | Mở MiMo CLI |
 | `login_platform.bat` | OAuth / menu 5 |
 | `manage_accounts.bat` | Quản lý slot / menu 6 |
+| `manage_context.bat` | Context Vault / menu 8 |
 | `reset_machine.bat` | Reset ID máy / menu 3 |
 | `totally_reset.bat` | Reset toàn bộ / menu 4 |
 | `deep_reset.bat` | Reset sâu / menu 7 |
 | `setup_auto.bat` | Cấu hình MiMo Auto |
 
+Repo pin **`@mimo-ai/cli` 0.1.5** (trong `mimo/package.json`). Sau khi pull, chạy lại `cd mimo && npm install` nếu CLI cũ.
+
+### Lỗi `actor tool` / `Delegating...` (workaround)
+
+Khi dùng agent **Build + MiMo Auto**, đôi khi xuất hiện lỗi đỏ:
+
+```text
+The actor tool was called with invalid arguments.
+Invalid input: expected object, received string  (path: operation)
+```
+
+**Nguyên nhân:** bug upstream MiMo-Code — model gửi tham số `operation` dạng string thay vì object khi spawn subagent ([issue #417](https://github.com/XiaomiMiMo/MiMo-Code/issues/417), [#561](https://github.com/XiaomiMiMo/MiMo-Code/issues/561)). Không phải lỗi code dự án Python trong repo này.
+
+**Giảm lỗi:**
+
+1. Giữ CLI **≥ 0.1.5**: `cd mimo && npm install`
+2. **`setup_mimo_auto.py`** (menu reset / `mimo/setup_auto.bat`) mặc định **`permission.task: deny`** trên agent Build — không spawn subagent, tránh lỗi `actor`
+3. Prompt cụ thể, tránh kích hoạt delegate: *"Đọc file X, grep Y — **không delegate subagent**"*
+4. Task quét repo lớn → ưu tiên **Cursor Agent** thay vì MiMo Build
+5. Bật lại subagent (tự chịu rủi ro): sửa `~/.config/mimocode/mimocode.jsonc`, xóa block `permission.task` trong `agent.build`
+
+## Context Vault (ngữ cảnh local)
+
+Lưu / khôi phục `memory/`, `mimocode.db`, `storage/`, `snapshot/` vào:
+
+```
+Documents/.dmctn-mimo/context/
+  context_manifest.json
+  bundles/*.tar.gz
+```
+
+- **Menu 8** — list / tạo snapshot / activate / rename / delete
+- **Menu 3** — chọn chế độ reset (giữ hoặc xóa context)
+- Vault nằm **ngoài** `mimocode/` nên không bị xóa nhầm bởi wipe thường
+
+**Disclaimer:** chỉ nhớ **local** (~75–85% khả thi). **Không** cam kết MiMo Auto trên server vẫn nhớ phiên sau khi đổi `mimo-free-client` (phụ thuộc Xiaomi).
+
 ## So sánh reset
 
-| | Menu 3 | Menu 4 | Menu 7 |
-|---|:---:|:---:|:---:|
-| Machine ID mới | ✓ | ✓ | ✓ |
-| Xóa `auth.json` active | ✓ | ✓ | ✓ |
-| Xóa DB / memory / session | — | ✓ | ✓ |
-| Giữ slot `accounts/` | ✓ | ✓ | — |
-| Xóa `.config/mimocode` | — | — | ✓ |
-| Xác nhận `YES` | — | — | ✓ |
+| | Menu 3 (wipe) | Menu 3 (preserve) | Menu 3 (registry) | Menu 4 | Menu 7 |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Machine ID mới | ✓ | ✓ | — | ✓ | ✓ |
+| Đổi registry | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Snapshot / restore context | — | ✓ | — | tùy chọn | tùy chọn |
+| Xóa `auth.json` active | ✓ | ✓ | — | ✓ | ✓ |
+| Xóa DB / memory / session | — | —* | — | ✓ | ✓ |
+| Giữ slot `accounts/` | ✓ | ✓ | ✓ | ✓ | — |
+| Xóa Context Vault | — | — | — | — | tùy chọn (mặc định giữ) |
+| Xác nhận `YES` | — | — | — | — | ✓ |
 
-Sau reset: dùng **MiMo Auto** (Tab trong CLI) hoặc đăng nhập lại menu **5**.
+\* Preserve: memory được restore sau khi đổi ID.
+
+Sau reset: dùng **MiMo Auto** (Tab trong CLI) hoặc đăng nhập lại menu **5**. Restore context: menu **8**.
 
 ## Cấu hình
 

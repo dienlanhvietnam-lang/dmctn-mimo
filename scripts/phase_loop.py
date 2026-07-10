@@ -38,22 +38,26 @@ PHASES = [
     "10_mimo_protected",
     "11_branding",
     "12_translator_keys",
+    "13_context_vault",
 ]
 
 CORE_MODULES = [
     "main", "config", "utils", "ui", "logo", "branding",
     "reset_mimo_machine", "totally_reset_mimo", "setup_mimo_auto", "mimo_auth",
     "mimo_account_slots", "mimo_platform_login", "mimo_manage_accounts", "chrome_profile",
-    "mimo_paths",
+    "mimo_paths", "mimo_context_paths", "mimo_context_vault", "mimo_manage_context",
 ]
 
 LOCALE_KEYS = [
     "menu.mimo_platform_login",
     "menu.mimo_manage_accounts",
     "menu.deep_reset_mimo",
+    "menu.manage_context",
     "mimo_slots.title",
     "mimo_login.title",
     "mimo_deep.title",
+    "mimo_context.title",
+    "mimo_reset.mode_preserve",
 ]
 
 
@@ -180,11 +184,19 @@ class PhaseRunner:
         return True, f"width={ui.box_width()}"
 
     def phase_mimo_protected(self):
-        from mimo_paths import get_mimo_protected_dirs, get_mimo_wipe_dirs
+        from mimo_context_paths import get_context_vault_dir
+        from mimo_paths import get_dmctn_protected_paths, get_mimo_protected_dirs, get_mimo_wipe_dirs
 
         protected = get_mimo_protected_dirs()
         wipe = get_mimo_wipe_dirs()
         bad = [name for name in protected if any(p.endswith(name) for p in wipe)]
+        vault = os.path.normcase(os.path.abspath(get_context_vault_dir()))
+        wipe_abs = [os.path.normcase(os.path.abspath(p)) for p in wipe]
+        if vault in wipe_abs:
+            bad.append("context_vault")
+        dmctn = [os.path.normcase(os.path.abspath(p)) for p in get_dmctn_protected_paths()]
+        if vault not in dmctn:
+            bad.append("dmctn_protected_missing")
         return not bad, "ok" if not bad else f"leak {bad}"
 
     def phase_branding(self):
@@ -201,6 +213,18 @@ class PhaseRunner:
         t.load_translations()
         missing = [k for k in LOCALE_KEYS if t.get(k) == k]
         return not missing, "ok" if not missing else f"missing {missing[:3]}"
+
+    def phase_context_vault(self):
+        from mimo_context_paths import get_context_bundle_paths, get_context_vault_dir
+        from mimo_context_vault import list_context_slots
+
+        paths = get_context_bundle_paths()
+        assert any("memory" in p.replace("\\", "/") for p in paths)
+        vault = get_context_vault_dir()
+        assert ".dmctn-mimo" in vault.replace("\\", "/") or "dmctn" in vault.lower()
+        data = list_context_slots()
+        assert "slots" in data and "count" in data
+        return True, f"slots={data['count']}"
 
 
 def apply_fixes(failed_phases: list[str]) -> list[str]:

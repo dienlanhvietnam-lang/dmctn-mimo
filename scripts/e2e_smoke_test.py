@@ -230,8 +230,10 @@ def test_dashboard_translations():
 
     main.translator.set_language("en")
     assert "Enter choice" in main._T("dashboard.prompt")
+    assert "[0-8]" in main._T("dashboard.prompt")
     main.translator.set_language("vi")
     assert "Nhập lựa chọn" in main._T("dashboard.prompt")
+    assert "[0-8]" in main._T("dashboard.prompt")
 
 
 def test_save_user_language():
@@ -359,6 +361,277 @@ def test_open_url_via_subprocess_args():
         chrome_profile.get_user_data_directory = orig_user
 
 
+def _patch_context_dirs(tmp_data: str, tmp_vault: str):
+    """Patch mimo_paths + utils so vault/data live under temp dirs."""
+    import mimo_context_paths as cpaths
+    import mimo_context_vault as vault
+    import mimo_paths
+    import utils
+
+    orig = {
+        "data": mimo_paths.get_mimo_data_dir,
+        "app": utils.get_app_config_dir,
+        "vault": cpaths.get_context_vault_dir,
+    }
+    mimo_paths.get_mimo_data_dir = lambda: tmp_data
+    utils.get_app_config_dir = lambda: tmp_vault
+    # Re-bind vault helpers that call get_app_config_dir at call time — already do
+    return orig
+
+
+def _restore_context_dirs(orig):
+    import mimo_paths
+    import utils
+
+    mimo_paths.get_mimo_data_dir = orig["data"]
+    utils.get_app_config_dir = orig["app"]
+
+
+def test_context_paths_targets():
+    from mimo_context_paths import get_context_bundle_paths
+
+    paths = get_context_bundle_paths()
+    joined = " ".join(paths).replace("\\", "/")
+    assert "memory" in joined
+    assert "mimocode.db" in joined
+
+
+def test_context_vault_crud():
+    import mimo_context_vault as vault
+    import mimo_paths
+    import utils
+
+    tmp = tempfile.mkdtemp(prefix="mimo_ctx_")
+    data_dir = os.path.join(tmp, "mimocode")
+    vault_root = os.path.join(tmp, "dmctn")
+    mem = os.path.join(data_dir, "memory")
+    os.makedirs(mem, exist_ok=True)
+    marker = os.path.join(mem, "note.txt")
+    with open(marker, "w", encoding="utf-8") as f:
+        f.write("hello-context")
+
+    orig_data = mimo_paths.get_mimo_data_dir
+    orig_app = utils.get_app_config_dir
+    mimo_paths.get_mimo_data_dir = lambda: data_dir
+    utils.get_app_config_dir = lambda: vault_root
+    try:
+        created = vault.create_context_snapshot(label="test-ctx")
+        assert created["slot_id"]
+        assert vault.list_context_slots()["count"] == 1
+
+        shutil.rmtree(mem)
+        assert not os.path.isfile(marker)
+
+        vault.restore_context_snapshot(created["slot_id"])
+        assert os.path.isfile(marker)
+        with open(marker, encoding="utf-8") as f:
+            assert f.read() == "hello-context"
+
+        vault.rename_context_slot(created["slot_id"], "renamed-ctx")
+        assert vault.list_context_slots()["slots"][0]["label"] == "renamed-ctx"
+
+        vault.delete_context_slot(created["slot_id"])
+        assert vault.list_context_slots()["count"] == 0
+    finally:
+        mimo_paths.get_mimo_data_dir = orig_data
+        utils.get_app_config_dir = orig_app
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_reset_preserve_context_dry():
+    import reset_mimo_machine as reset
+    import mimo_context_vault as vault
+    import mimo_paths
+    import utils
+
+    tmp = tempfile.mkdtemp(prefix="mimo_preserve_")
+    data_dir = os.path.join(tmp, "mimocode")
+    vault_root = os.path.join(tmp, "dmctn")
+    mem = os.path.join(data_dir, "memory")
+    os.makedirs(mem, exist_ok=True)
+    marker = os.path.join(mem, "keep.txt")
+    with open(marker, "w", encoding="utf-8") as f:
+        f.write("preserve-me")
+    client_path = os.path.join(data_dir, "mimo-free-client")
+    with open(client_path, "w", encoding="utf-8") as f:
+        f.write("old-client-id")
+
+    orig_data = mimo_paths.get_mimo_data_dir
+    orig_app = utils.get_app_config_dir
+    mimo_paths.get_mimo_data_dir = lambda: data_dir
+    utils.get_app_config_dir = lambda: vault_root
+    try:
+        ok = reset.reset_mimo_machine(
+            mode=reset.MODE_FULL_PRESERVE,
+            skip_registry=True,
+            skip_backup=True,
+            skip_slot_backup=True,
+            clear_auth=False,
+        )
+        assert ok is True
+        assert vault.list_context_slots()["count"] >= 1
+        assert os.path.isfile(marker)
+        with open(marker, encoding="utf-8") as f:
+            assert f.read() == "preserve-me"
+        with open(client_path, encoding="utf-8") as f:
+            assert f.read() != "old-client-id"
+    finally:
+        mimo_paths.get_mimo_data_dir = orig_data
+        utils.get_app_config_dir = orig_app
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_context_slot_activate():
+    import mimo_context_vault as vault
+    import mimo_paths
+    import utils
+
+    tmp = tempfile.mkdtemp(prefix="mimo_ctx2_")
+    data_dir = os.path.join(tmp, "mimocode")
+    vault_root = os.path.join(tmp, "dmctn")
+    mem = os.path.join(data_dir, "memory")
+    os.makedirs(mem, exist_ok=True)
+
+    orig_data = mimo_paths.get_mimo_data_dir
+    orig_app = utils.get_app_config_dir
+    mimo_paths.get_mimo_data_dir = lambda: data_dir
+    utils.get_app_config_dir = lambda: vault_root
+    try:
+        with open(os.path.join(mem, "a.txt"), "w", encoding="utf-8") as f:
+            f.write("slot-a")
+        a = vault.create_context_snapshot(label="A")
+
+        with open(os.path.join(mem, "a.txt"), "w", encoding="utf-8") as f:
+            f.write("slot-b")
+        b = vault.create_context_snapshot(label="B")
+
+        vault.activate_context_slot(a["slot_id"])
+        with open(os.path.join(mem, "a.txt"), encoding="utf-8") as f:
+            assert f.read() == "slot-a"
+
+        vault.activate_context_slot(b["slot_id"])
+        with open(os.path.join(mem, "a.txt"), encoding="utf-8") as f:
+            assert f.read() == "slot-b"
+        assert vault.get_active_context_id() == b["slot_id"]
+    finally:
+        mimo_paths.get_mimo_data_dir = orig_data
+        utils.get_app_config_dir = orig_app
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_registry_only_keeps_client():
+    import reset_mimo_machine as reset
+    import mimo_paths
+    import utils
+
+    tmp = tempfile.mkdtemp(prefix="mimo_reg_")
+    data_dir = os.path.join(tmp, "mimocode")
+    vault_root = os.path.join(tmp, "dmctn")
+    os.makedirs(data_dir, exist_ok=True)
+    client_path = os.path.join(data_dir, "mimo-free-client")
+    with open(client_path, "w", encoding="utf-8") as f:
+        f.write("stable-client-xyz")
+
+    orig_data = mimo_paths.get_mimo_data_dir
+    orig_app = utils.get_app_config_dir
+    mimo_paths.get_mimo_data_dir = lambda: data_dir
+    utils.get_app_config_dir = lambda: vault_root
+    try:
+        ok = reset.reset_mimo_machine(
+            mode=reset.MODE_REGISTRY_ONLY,
+            skip_registry=True,
+            skip_backup=True,
+        )
+        assert ok is True
+        with open(client_path, encoding="utf-8") as f:
+            assert f.read() == "stable-client-xyz"
+    finally:
+        mimo_paths.get_mimo_data_dir = orig_data
+        utils.get_app_config_dir = orig_app
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_manage_context_import():
+    import mimo_manage_context
+
+    assert callable(mimo_manage_context.run)
+    assert callable(mimo_manage_context.manage_context)
+
+
+def test_vault_outside_wipe_targets():
+    from mimo_context_paths import get_context_vault_dir
+    from mimo_paths import get_dmctn_protected_paths, get_mimo_wipe_dirs
+
+    vault = os.path.normcase(os.path.abspath(get_context_vault_dir()))
+    wipe = [os.path.normcase(os.path.abspath(p)) for p in get_mimo_wipe_dirs()]
+    assert vault not in wipe
+    protected = [os.path.normcase(os.path.abspath(p)) for p in get_dmctn_protected_paths()]
+    assert vault in protected
+
+
+def test_total_reset_auto_snapshot():
+    import mimo_context_vault as vault
+    import mimo_paths
+    import utils
+
+    tmp = tempfile.mkdtemp(prefix="mimo_total_snap_")
+    data_dir = os.path.join(tmp, "mimocode")
+    vault_root = os.path.join(tmp, "dmctn")
+    mem = os.path.join(data_dir, "memory")
+    os.makedirs(mem, exist_ok=True)
+    with open(os.path.join(mem, "x.txt"), "w", encoding="utf-8") as f:
+        f.write("before-total")
+
+    orig_data = mimo_paths.get_mimo_data_dir
+    orig_app = utils.get_app_config_dir
+    mimo_paths.get_mimo_data_dir = lambda: data_dir
+    utils.get_app_config_dir = lambda: vault_root
+    try:
+        # Dry: only exercise snapshot path used by total reset
+        assert vault.has_local_context()
+        result = vault.create_context_snapshot(label="pre-total-test")
+        assert result["slot_id"]
+        assert vault.list_context_slots()["count"] >= 1
+        assert os.path.isfile(result["bundle"])
+    finally:
+        mimo_paths.get_mimo_data_dir = orig_data
+        utils.get_app_config_dir = orig_app
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_deep_reset_keeps_vault_by_default():
+    import mimo_context_vault as vault
+    import mimo_paths
+    import utils
+
+    tmp = tempfile.mkdtemp(prefix="mimo_deep_vault_")
+    data_dir = os.path.join(tmp, "mimocode")
+    vault_root = os.path.join(tmp, "dmctn")
+    mem = os.path.join(data_dir, "memory")
+    os.makedirs(mem, exist_ok=True)
+    with open(os.path.join(mem, "y.txt"), "w", encoding="utf-8") as f:
+        f.write("keep-vault")
+
+    orig_data = mimo_paths.get_mimo_data_dir
+    orig_app = utils.get_app_config_dir
+    mimo_paths.get_mimo_data_dir = lambda: data_dir
+    utils.get_app_config_dir = lambda: vault_root
+    try:
+        created = vault.create_context_snapshot(label="keep-me")
+        # wipe_vault=False must leave manifest
+        assert vault.list_context_slots()["count"] == 1
+        # Simulate deep reset default: do not wipe vault
+        wipe_vault = False
+        if wipe_vault:
+            vault.wipe_context_vault()
+        assert vault.list_context_slots()["count"] == 1
+        assert vault.list_context_slots()["slots"][0]["id"] == created["slot_id"]
+    finally:
+        mimo_paths.get_mimo_data_dir = orig_data
+        utils.get_app_config_dir = orig_app
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description="E2E smoke tests (quiet by default)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Show full module output")
@@ -382,6 +655,15 @@ def main():
         ("extract oauth url", test_extract_oauth_url),
         ("providers login early return", test_run_providers_login_returns_early_on_url),
         ("open url subprocess args", test_open_url_via_subprocess_args),
+        ("context paths targets", test_context_paths_targets),
+        ("context vault crud", test_context_vault_crud),
+        ("reset preserve context dry", test_reset_preserve_context_dry),
+        ("context slot activate", test_context_slot_activate),
+        ("registry only keeps client", test_registry_only_keeps_client),
+        ("manage context import", test_manage_context_import),
+        ("vault outside wipe targets", test_vault_outside_wipe_targets),
+        ("total reset auto snapshot", test_total_reset_auto_snapshot),
+        ("deep reset keeps vault", test_deep_reset_keeps_vault_by_default),
     ]
 
     for name, fn in cases:

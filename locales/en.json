@@ -15,7 +15,8 @@
         "totally_reset_mimo": "Totally Reset MiMo CLI",
         "mimo_platform_login": "MiMo Platform Login (Chrome profile)",
         "mimo_manage_accounts": "Manage MiMo Accounts",
-        "deep_reset_mimo": "Deep Reset MiMo (slots + .config)"
+        "deep_reset_mimo": "Deep Reset MiMo (slots + .config)",
+        "manage_context": "Manage Context Vault"
     },
     "mimo_login": {
         "title": "MiMo Platform Login",
@@ -75,11 +76,15 @@
         "pro_slots_saved": "Slots saved — activate via menu 6",
         "pro_not_logged_in": "Not logged in — menu 5",
         "hint_login": "Menu 5 = Platform login · Menu 6 = manage slots",
-        "prompt": "Enter choice [0-7], h=help, r=reload, q=quit:",
+        "prompt": "Enter choice [0-8], h=help, r=reload, q=quit:",
+        "context_slots": "Saved context",
+        "context_none": "None — menu 8",
+        "context_active": "Active: {label}",
         "help_title": "Help",
         "help_menu5": "5 = MiMo Platform login (Chrome)",
         "help_menu6": "6 = Manage MiMo Pro account slots",
         "help_menu7": "7 = Deep reset — wipe slots + .config/mimocode + local data",
+        "help_menu8": "8 = Manage Context Vault (snapshot/restore local memory)",
         "help_reload": "r = Reload dashboard",
         "help_exit": "q / 0 = Exit"
     },
@@ -126,7 +131,9 @@
         "quit_mimo": "Closing {count} MiMo process(es)...",
         "remove_failed": "Could not remove: {path}",
         "partial": "Some paths are locked (close MiMo and retry or delete manually):",
-        "done": "Totally reset complete ({count} items removed). Run mimo/start.bat again."
+        "done": "Totally reset complete ({count} items removed). Run mimo/start.bat again.",
+        "snapshot_prompt": "Snapshot local context to Context Vault before wipe? (Y/n): ",
+        "restore_prompt": "Restore context from vault after reset? (Y/n): "
     },
     "mimo_deep": {
         "title": "Deep Reset MiMo CLI",
@@ -134,7 +141,10 @@
         "confirm": "Type YES to confirm deep reset: ",
         "cancelled": "Deep reset cancelled.",
         "extra": "Also removing: accounts/ + .config/mimocode (if separate)",
-        "done": "Deep reset complete ({count} items removed). Re-login via menu 5."
+        "done": "Deep reset complete ({count} items removed). Re-login via menu 5.",
+        "wipe_vault_prompt": "Also wipe Context Vault (.dmctn-mimo/context)? (y/N): ",
+        "vault_wiped": "Context Vault wiped ({count} slots)",
+        "vault_kept": "Context Vault kept (use menu 8 to restore)"
     },
     "mimo_reset": {
         "title": "Reset MiMo Machine ID",
@@ -154,7 +164,31 @@
         "next_restart": "Restart: mimo/start.bat",
         "401_hint": "401 Invalid API Key = using Pro model without auth.json after reset",
         "auto_config": "MiMo Auto config applied: {path}",
-        "done": "MiMo machine reset complete."
+        "done": "MiMo machine reset complete.",
+        "mode_preserve": "Full reset + KEEP local context",
+        "mode_wipe": "Full reset + DISCARD context",
+        "mode_registry_only": "Registry only (keep client ID + context)",
+        "cancelled": "Reset cancelled.",
+        "registry_skipped": "Registry update skipped (test mode)"
+    },
+    "mimo_context": {
+        "title": "Manage Context Vault",
+        "empty": "No context snapshots yet. Use menu 3 (keep context) or create one here.",
+        "list_header": "Saved snapshots ({count}):",
+        "active": "active",
+        "snapshot_ok": "Context snapshot: {id}",
+        "restore_ok": "Local context restored: {id}",
+        "nothing_to_snapshot": "No local context to snapshot",
+        "local_only_disclaimer": "Local context only — MiMo Auto server may not remember the old session after client ID change.",
+        "create": "Create snapshot now",
+        "activated": "Activated / restored → {id}",
+        "deleted": "Snapshot deleted",
+        "renamed": "Label updated",
+        "delete_confirm": "Delete {label}? (y/N)",
+        "new_label": "New label",
+        "pick": "Snapshot number",
+        "invalid": "Invalid snapshot number",
+        "mismatch_warn": "client_hash differs from current — local restore still works; Auto server may not reconnect"
     },
     "oauth": {
         "no_compatible_browser_found": "No compatible browser found. Please install Google Chrome or Chromium."

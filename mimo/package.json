@@ -8,6 +8,6 @@
     "start": "mimo"
   },
   "dependencies": {
-    "@mimo-ai/cli": "^0.1.1"
+    "@mimo-ai/cli": "0.1.5"
   }
 }
